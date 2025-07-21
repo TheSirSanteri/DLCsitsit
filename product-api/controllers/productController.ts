@@ -4,3 +4,5 @@ import { products } from "../db/productsdb.ts";
 export const getProducts = (ctx: Context) => {
   ctx.response.body = products;
 };
+
+export const takeProduct = (ctx: Context) => {
