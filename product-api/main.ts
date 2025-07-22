@@ -1,5 +1,5 @@
 import { Application, Router } from "@oak/oak";
-import productsRouter from "./routes/products.ts";
+import productsRouter from "./controllers/productController.ts"
 
 const app = new Application();
 const router = new Router();
