@@ -8,6 +8,11 @@ interface Product {
   available: number;
 }
 
+export interface ReservationItem {
+  id: string;
+  quantity: number;
+}
+
 async function readProducts(): Promise<Product[]> {
   try {
     const data = await readJson(DATA_PATH) as Product[];
@@ -16,14 +21,35 @@ async function readProducts(): Promise<Product[]> {
     return [];
   }
 }
-/*
+
 async function writeProducts(products: Product[]): Promise<void> {
   await writeJson(DATA_PATH, products, { spaces: 2 });
 }
-*/
+
 export async function getAllProducts(): Promise<Product[]> {
   return await readProducts();
 }
+
+export async function reserveProducts(items: ReservationItem[]): Promise<Product[]> {
+  const products = await readProducts();
+
+  for (const { id, quantity } of items) {
+    const product = products.find(p => p.id === id);
+    if (!product) {
+      throw new Error(`Tuotetta ${id} ei löydy`);
+    }
+    if (product.available < quantity) {
+      throw new Error(
+        `Tuotteesta ${id} ei ole tarpeeksi saatavilla (pyydettiin ${quantity}, saatavilla ${product.available})`
+      );
+    }
+    product.available -= quantity;
+  }
+
+  await writeProducts(products);
+  return products;
+}
+
 /*
 export async function getProductById(id: string): Promise<Product | undefined> {
   const products = await readProducts();

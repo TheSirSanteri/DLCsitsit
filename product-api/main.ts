@@ -8,9 +8,10 @@ router.get("/", (ctx) => {
   ctx.response.body = "Hello world!";
 });
 
-
+//For testing / route
 app.use(router.routes());
 app.use(router.allowedMethods());
+
 app.use(productsRouter.routes());
 app.use(productsRouter.allowedMethods());
 

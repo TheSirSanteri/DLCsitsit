@@ -1,6 +1,8 @@
 import { Router } from "@oak/oak";
 import {
   getAllProducts,
+  reserveProducts,
+  ReservationItem,
 } from "../models/product.ts";
 
 const router = new Router({prefix: "/api/products"});
@@ -10,7 +12,17 @@ router.get("/", async (ctx) => {
   ctx.response.body = products;
 });
 
-//router.post(/)
+router.post("/reserve", async (ctx) => {
+  const items = await ctx.request.source!.json() as ReservationItem[];
+    try {
+      const updated = await reserveProducts(items);
+      ctx.response.status = 200;
+      ctx.response.body = updated;
+    } catch (error) {
+      ctx.response.status = 400;
+      ctx.response.body = { error: (error as Error).message };
+    }
+});
 /*
 router.get("/products/:id", async (ctx) => {
   const id = ctx.params.id!;
