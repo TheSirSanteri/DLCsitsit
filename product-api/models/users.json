@@ -1,0 +1,18 @@
+[
+    {
+        "username": "1",
+        "name": "Testi Käyttäjä",
+        "email": "testaaja@gamil.com",
+        "password": "XCV12345",
+        "reservedProducts": []
+    },
+    {
+        "username": "2",
+        "name": "2Testi Käyttäjä",
+        "email": "2testaaja@gamil.com",
+        "password": "XCT12345",
+        "reservedProducts": []
+    }
+
+
+]

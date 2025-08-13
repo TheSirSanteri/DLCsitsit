@@ -1,71 +1,61 @@
-import { Router } from "@oak/oak";
-import {
-  getAllProducts,
-  reserveProducts,
-  ReservationItem,
-} from "../models/product.ts";
+import { Context } from "@oak/oak";
+import { findProductById, readProducts, writeProducts } from "../models/product.ts";
+import { updateUser, type Reservation } from "../models/users.ts";
 
-const router = new Router({prefix: "/api/products"});
-
-router.get("/", async (ctx) => {
-  const products = await getAllProducts();
-  ctx.response.body = products;
-});
-
-router.post("/reserve", async (ctx) => {
-  const items = await ctx.request.source!.json() as ReservationItem[];
-    try {
-      const updated = await reserveProducts(items);
-      ctx.response.status = 200;
-      ctx.response.body = updated;
-    } catch (error) {
-      ctx.response.status = 400;
-      ctx.response.body = { error: (error as Error).message };
-    }
-});
-/*
-router.get("/products/:id", async (ctx) => {
-  const id = ctx.params.id!;
-  const product = await getProductById(id);
-
-  if (product) {
-    ctx.response.body = product;
-  } else {
-    ctx.response.status = 404;
-    ctx.response.body = { error: "Product not found" };
+export async function reserveProduct(ctx: Context) {
+  const user = (ctx.state as any).user as { username: string; reservedProducts?: Reservation[] } | undefined;
+  if (!user) {
+    ctx.response.status = 401;
+    ctx.response.body = { error: "unauthorized" };
+    return;
   }
-});
 
-router.post("/products", async (ctx) => {
-  const body = await ctx.request.body({ type: "json" }).value;
-  const newProduct = await addProduct(body);
-  ctx.response.status = 201;
-  ctx.response.body = newProduct;
-});
-
-router.put("/products/:id", async (ctx) => {
-  const id = ctx.params.id!;
-  const body = await ctx.request.body({ type: "json" }).value;
-  const updatedProduct = await updateProduct(id, body);
-
-  if (updatedProduct) {
-    ctx.response.body = updatedProduct;
-  } else {
-    ctx.response.status = 404;
-    ctx.response.body = { error: "Product not found" };
+  const { productId, quantity } = await ctx.request.body.json();
+  if (!productId || !Number.isInteger(quantity) || quantity <= 0) {
+    ctx.response.status = 400;
+    ctx.response.body = { error: "productId and positive integer quantity required" };
+    return;
   }
-});
 
-router.delete("/products/:id", async (ctx) => {
-  const id = ctx.params.id!;
-  const success = await deleteProduct(id);
-
-  if (success) {
-    ctx.response.status = 204;
-  } else {
+  const product = await findProductById(productId);
+  if (!product) {
     ctx.response.status = 404;
-    ctx.response.body = { error: "Product not found" };
+    ctx.response.body = { error: "product not found" };
+    return;
   }
-});
-*/
-export default router;
+  if (product.available < quantity) {
+    ctx.response.status = 409;
+    ctx.response.body = { error: "not enough stock", available: product.available };
+    return;
+  }
+
+  // update availability
+  const products = await readProducts();
+  const idx = products.findIndex((p) => p.id === productId);
+  products[idx] = { ...product, available: product.available - quantity };
+  await writeProducts(products);
+
+  // store reservation to user
+  const reservation: Reservation = { productId, quantity, reservedAt: new Date().toISOString() };
+  user.reservedProducts = user.reservedProducts ?? [];
+  user.reservedProducts.push(reservation);
+  await updateUser(user as any);
+
+  ctx.response.body = {
+    ok: true,
+    productId,
+    reservedQuantity: quantity,
+    remaining: products[idx].available,
+    username: user.username,
+  };
+}
+
+export async function myReservations(ctx: Context) {
+  const user = (ctx.state as any).user;
+  if (!user) {
+    ctx.response.status = 401;
+    ctx.response.body = { error: "unauthorized" };
+    return;
+  }
+  ctx.response.body = { username: user.username, reservedProducts: user.reservedProducts ?? [] };
+}
