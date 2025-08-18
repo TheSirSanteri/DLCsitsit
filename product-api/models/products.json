@@ -2,16 +2,19 @@
   {
     "id": "1",
     "name": "Seat at table",
-    "available": 7
+    "available": 15,
+    "maxPerUser": 2
   },
   {
     "id": "2",
     "name": "Chair",
-    "available": 18
+    "available": 36,
+    "maxPerUser": 0
   },
   {
     "id": "3",
     "name": "Food",
-    "available": 7
+    "available": 23,
+    "maxPerUser": 0
   }
 ]

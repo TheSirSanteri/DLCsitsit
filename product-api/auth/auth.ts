@@ -4,6 +4,32 @@ import { readUsers } from "../models/users.ts";
 
 const SECRET = new TextEncoder().encode(Deno.env.get("JWT_SECRET") ?? "dev-secret-change-me");
 
+/** Yhtenäinen Bearer-tokenin nouto */
+export function extractBearer(
+  input: Context | Request | { headers: Headers } | { request: { headers: Headers } } | Headers,
+): string | null {
+  const headers = toHeaders(input);
+  if (!headers) return null;
+  const raw = headers.get("authorization") ?? headers.get("Authorization");
+  if (!raw) return null;
+  const m = /^Bearer\s+(.+)$/i.exec(raw.trim());
+  return m ? m[1].trim() : null;
+}
+
+function toHeaders(
+  input: Context | Request | { headers: Headers } | { request: { headers: Headers } } | Headers,
+): Headers | null {
+  if (input instanceof Request) return input.headers;
+  if (typeof Headers !== "undefined" && input instanceof Headers) return input;
+  if (typeof (input as Context)?.request?.headers !== "undefined") return (input as Context).request.headers;
+  if ((input as { headers?: Headers })?.headers instanceof Headers) return (input as { headers: Headers }).headers;
+  if ((input as { request?: { headers?: Headers } })?.request?.headers instanceof Headers) {
+    return (input as { request: { headers: Headers } }).request.headers;
+  }
+  return null;
+}
+
+/** POST /api/login */
 export async function loginHandler(ctx: Context) {
   const { username, password } = await ctx.request.body.json();
   if (!username || !password) {
@@ -28,14 +54,14 @@ export async function loginHandler(ctx: Context) {
   ctx.response.body = { token, expiresInSeconds: 86400 };
 }
 
+/** Suojaava middleware */
 export async function authMiddleware(ctx: Context, next: () => Promise<unknown>) {
-  const auth = ctx.request.headers.get("authorization") ?? "";
-  if (!auth.toLowerCase().startsWith("bearer ")) {
+  const token = extractBearer(ctx);
+  if (!token) {
     ctx.response.status = 401;
     ctx.response.body = { error: "missing bearer token" };
     return;
   }
-  const token = auth.slice("bearer ".length);
 
   try {
     const { payload } = await jwtVerify(token, SECRET, { algorithms: ["HS256"] });
@@ -52,4 +78,9 @@ export async function authMiddleware(ctx: Context, next: () => Promise<unknown>)
     ctx.response.status = 401;
     ctx.response.body = { error: "invalid or expired token" };
   }
+}
+
+/** POST /api/logout */
+export function logoutHandler(ctx: Context) {
+  ctx.response.status = 204;
 }

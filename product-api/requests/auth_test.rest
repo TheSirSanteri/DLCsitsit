@@ -1,0 +1,38 @@
+
+### API base
+@baseUrl = http://localhost:8000
+@Token = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiIxIiwiZXhwIjoxNzU1NjIzOTYwfQ.eDCJvM8DQUhRlvHQVuVAA20u1oaH16PqzD-oMeCN6PA
+
+### 1) Health check
+GET {{baseUrl}}/api/health
+
+### 2) Login (replace credentials as needed)
+
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+
+{ "username": "1", "password": "XCV12345" }
+
+
+### 3) List products
+GET {{baseUrl}}/api/products
+
+### 4) Reserve product for the logged-in user
+# Reserve 2 units of product with id "1"
+POST {{baseUrl}}/api/products/reserve
+Authorization: Bearer {{Token}}
+Content-Type: application/json
+
+[
+  {"productId": "1", "quantity": 4},
+  {"productId": "2", "quantity": 7}
+]
+
+### 5) Check my reservations
+GET {{baseUrl}}/api/me/reservations
+Authorization: Bearer {{Token}}
+
+### 6) logout from account
+POST {{baseUrl}}/api/logout
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiIxIiwiZXhwIjoxNzU1NTA4OTAzfQ.xhPTTjvhOBMuG8oeq9OLDWAPPfM4zeSABJes8fEIzvE

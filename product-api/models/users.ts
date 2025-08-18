@@ -1,39 +1,47 @@
-export interface Reservation {
+export type UserReservation = {
+  reservedAt: string; // ISO for the whole operation
+  items: Array<{ productId: string; quantity: number }>;
+};
+
+export type ReservedProduct = {
   productId: string;
   quantity: number;
-  reservedAt: string;
-}
+  reservedAt: string; // legacy per-item; we won't write new entries here
+};
 
-export interface User {
-  username: string;       // user ID
+export type User = {
+  username: string;
   name: string;
   email: string;
   password: string;
-  reservedProducts: Reservation[];
-}
+  reservedProducts: ReservedProduct[]; // legacy
+  reservations?: UserReservation[];    // new
+};
 
-const USERS_PATH = "./models/users.json";
+// --- IO-apurit Deno-ympäristöön ---
+const USERS_URL = new URL("./users.json", import.meta.url);
 
 export async function readUsers(): Promise<User[]> {
-  const raw = JSON.parse(await Deno.readTextFile(USERS_PATH));
-  // pienenä kompatina tuetaan legacy "id" ja "reservations" kenttiä
-  return raw.map((u: any) => ({
-    username: u.username ?? u.id,
-    name: u.name,
-    email: u.email,
-    password: u.password,
-    reservedProducts: u.reservedProducts ?? u.reservations ?? [],
-  })) as User[];
+  const txt = await Deno.readTextFile(USERS_URL);
+  return JSON.parse(txt) as User[];
 }
 
-export async function writeUsers(users: User[]): Promise<void> {
-  await Deno.writeTextFile(USERS_PATH, JSON.stringify(users, null, 2));
+export async function writeUsers(data: User[]): Promise<void> {
+  const tmp = new URL("./users.json.tmp", import.meta.url);
+  await Deno.writeTextFile(tmp, JSON.stringify(data, null, 2));
+  await Deno.rename(tmp, USERS_URL); // atominen vaihto
 }
 
-export async function updateUser(user: User): Promise<void> {
+export async function getUserByUsername(
+  username: string
+): Promise<User | undefined> {
   const users = await readUsers();
-  const idx = users.findIndex((u) => u.username === user.username);
-  if (idx === -1) throw new Error("User not found");
-  users[idx] = user;
-  await writeUsers(users);
+  return users.find(u => u.username === username);
+}
+
+export async function getUserReservations(
+  username: string
+): Promise<UserReservation[]> {
+  const user = await getUserByUsername(username);
+  return user?.reservations ?? [];
 }

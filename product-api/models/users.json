@@ -1,18 +1,31 @@
 [
-    {
-        "username": "1",
-        "name": "Testi Käyttäjä",
-        "email": "testaaja@gamil.com",
-        "password": "XCV12345",
-        "reservedProducts": []
-    },
-    {
-        "username": "2",
-        "name": "2Testi Käyttäjä",
-        "email": "2testaaja@gamil.com",
-        "password": "XCT12345",
-        "reservedProducts": []
-    }
-
-
+  {
+    "username": "1",
+    "name": "Testi Käyttäjä",
+    "email": "testaaja@gamil.com",
+    "password": "XCV12345",
+    "reservedProducts": [],
+    "reservations": [
+      {
+        "reservedAt": "2025-08-18T17:25:55.025Z",
+        "items": [
+          {
+            "productId": "1",
+            "quantity": 2
+          },
+          {
+            "productId": "2",
+            "quantity": 7
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "username": "2",
+    "name": "2Testi Käyttäjä",
+    "email": "2testaaja@gamil.com",
+    "password": "XCT12345",
+    "reservedProducts": []
+  }
 ]
