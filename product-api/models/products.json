@@ -1,7 +1,7 @@
 [
   {
     "id": "1",
-    "name": "Seat at table",
+    "name": "Table wear",
     "available": 15,
     "maxPerUser": 2
   },
@@ -13,7 +13,25 @@
   },
   {
     "id": "3",
-    "name": "Food",
+    "name": "Starter food",
+    "available": 23,
+    "maxPerUser": 0
+  },
+  {
+    "id": "4",
+    "name": "Main course",
+    "available": 23,
+    "maxPerUser": 0
+  },
+  {
+    "id": "5",
+    "name": "Dessert",
+    "available": 23,
+    "maxPerUser": 0
+  },
+    {
+    "id": "6",
+    "name": "Place at the table",
     "available": 23,
     "maxPerUser": 0
   }

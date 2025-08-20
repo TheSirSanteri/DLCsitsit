@@ -1,6 +1,7 @@
 <script lang="ts">
   import { auth } from '$lib/stores/auth';
   import { api } from '$lib/api';
+  import { goto } from '$app/navigation';
 
   let username = '';
   let password = '';
@@ -24,7 +25,8 @@
       if (!token) throw new Error('Login response missing token');
       auth.set({ token, username: uname });
       successMsg = 'Logged in successfully.';
-      // esim: goto('/products');
+      // siirry tuotteisiin
+      goto('/products');
     } catch (err) {
       errorMsg = (err as Error).message || 'Login failed';
     } finally {
