@@ -1,8 +1,9 @@
 import { Application, Router, Context } from "@oak/oak";
 import { loginHandler, logoutHandler, authMiddleware } from "./auth/auth.ts";
 import { isReservationArray } from "./models/product.ts";
-import { getUserReservations} from "./models/users.ts";
+import { getUserReservations } from "./models/users.ts";
 import { reserveProductsAsOneOperationFlexible, listProducts } from "./controllers/productController.ts";
+import { oakCors } from "@tajpouria/cors";
 
 // --- Reitit ---
 const router = new Router();
@@ -10,8 +11,8 @@ const router = new Router();
 // Health check
 router.get("/api/health", (ctx: Context) => {
   ctx.response.status = 200;
-  ctx.response.body = { status: "ok" }
-})
+  ctx.response.body = { status: "ok" };
+});
 
 // Auth
 router.post("/api/login", loginHandler);
@@ -26,25 +27,34 @@ router.get("/api/products", async (ctx: Context) => {
 
 // Reservation (protected)
 router.post("/api/products/reserve", authMiddleware, async (ctx: Context) => {
+  console.log("[reserve] incoming");
+
   const body = await ctx.request.body.json().catch(() => null);
   if (!isReservationArray(body)) {
     ctx.response.status = 400;
-    ctx.response.body = { error: "Body must be an array of { productId, quantity } with positive integer quantity." };
+    ctx.response.body = {
+      ok: false,
+      error:
+        "Body must be an array of { productId, quantity } with positive integer quantity.",
+    };
     return;
   }
 
-  const user = (ctx.state as any).user as { username: string } | undefined;
+  const user = (ctx.state as { user?: { username: string } }).user;
   if (!user) {
     ctx.response.status = 401;
-    ctx.response.body = { error: "Unauthorized" };
+    ctx.response.body = { ok: false, error: "Unauthorized" };
     return;
   }
 
-  const result = await reserveProductsAsOneOperationFlexible(user.username, body);
+  const result = await reserveProductsAsOneOperationFlexible(
+    user.username,
+    body,
+  );
 
   if (!result.ok) {
     ctx.response.status = 400;
-    ctx.response.body = { error: result.error };
+    ctx.response.body = { ok: false, error: result.error };
     return;
   }
 
@@ -52,17 +62,17 @@ router.post("/api/products/reserve", authMiddleware, async (ctx: Context) => {
   ctx.response.status = 200;
   if (result.status === "full") {
     ctx.response.body = {
-      success: true,
-      status: "full",
-      message: result.message, // "Products reserved successfully"
+      ok: true,
+      status: "full" as const,
+      message: result.message,
       reservedAt: result.reservedAt,
       items: result.items,
     };
   } else {
     ctx.response.body = {
-      success: true,
-      status: "partial",
-      message: result.message, // "Products reserved partially, because there weren't enough"
+      ok: true,
+      status: "partial" as const,
+      message: result.message,
       reservedAt: result.reservedAt,
       items: result.items,
       partials: result.partials,
@@ -70,7 +80,7 @@ router.post("/api/products/reserve", authMiddleware, async (ctx: Context) => {
   }
 });
 
-
+// Oma data
 router.get("/api/me/reservations", authMiddleware, async (ctx) => {
   const { username } = (ctx.state as { user: { username: string } }).user;
   const reservations = await getUserReservations(username);
@@ -81,18 +91,15 @@ router.get("/api/me/reservations", authMiddleware, async (ctx) => {
 // --- Sovellus ---
 const app = new Application();
 
-// (valinnainen) hyvin yksinkertainen CORS kaikille
-app.use(async (ctx, next) => {
-  ctx.response.headers.set("Access-Control-Allow-Origin", "*");
-  ctx.response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  ctx.response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  if (ctx.request.method === "OPTIONS") {
-    ctx.response.status = 204;
-    return;
-  }
-  await next();
-});
+// CORS ENSIN — devissä riittää wildcard (Bearer-token, ei credentials)
+app.use(oakCors({
+  origin: "*",
+  allowedHeaders: ["Authorization", "Content-Type"],
+  methods: ["GET", "POST", "OPTIONS"],
+  credentials: false,
+}));
 
+// Reitit
 app.use(router.routes());
 app.use(router.allowedMethods());
 

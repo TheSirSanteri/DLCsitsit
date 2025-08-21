@@ -2,6 +2,7 @@
   import { auth } from '$lib/stores/auth';
   import { api } from '$lib/api';
   import { goto } from '$app/navigation';
+  import { notify } from '$lib/stores/notify';
 
   let username = '';
   let password = '';
@@ -28,7 +29,9 @@
       // siirry tuotteisiin
       goto('/products');
     } catch (err) {
-      errorMsg = (err as Error).message || 'Login failed';
+      const msg = (err as Error).message || 'Login failed';
+      errorMsg = '';            // (valinnainen) tyhjennä vanha inline
+      notify.error(msg);
     } finally {
       loading = false;
     }

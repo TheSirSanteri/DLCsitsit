@@ -9,7 +9,7 @@
   {
     "id": "2",
     "name": "Chair",
-    "available": 36,
+    "available": 39,
     "maxPerUser": 0,
     "price": 0.6
   },
@@ -23,7 +23,7 @@
   {
     "id": "4",
     "name": "Main course",
-    "available": 23,
+    "available": 22,
     "maxPerUser": 0,
     "price": 0.6
   },
@@ -34,7 +34,7 @@
     "maxPerUser": 0,
     "price": 0.6
   },
-    {
+  {
     "id": "6",
     "name": "Place at the table",
     "available": 23,

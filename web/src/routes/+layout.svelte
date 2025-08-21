@@ -1,5 +1,7 @@
 <script lang="ts">
   import favicon from '$lib/assets/favicon.svg';
+  import { notices } from '$lib/stores/notify';
+  import { fly } from 'svelte/transition';
   let { children } = $props();
 </script>
 
@@ -17,6 +19,21 @@
 
   <main class="content">
     {@render children?.()}
+
+    <!-- Oikea yläkulma: ilmoitukset -->
+    <div class="notices" aria-live="assertive" aria-atomic="true">
+      {#each $notices as n (n.id)}
+        <div
+          class="notice {n.kind}"
+          in:fly={{ y: -8, duration: 140 }}
+          out:fly={{ y: -8, duration: 120 }}
+          role={n.kind === 'error' ? 'alert' : 'status'}
+        >
+          <span class="text">{n.text}</span>
+          <button class="close" aria-label="Dismiss" onclick={() => notices.remove(n.id)}>×</button>
+        </div>
+      {/each}
+    </div>
   </main>
 
   <footer class="footer">
@@ -64,10 +81,11 @@
   }
 
   .content {
-    display: grid;           /* keskitys ilman ylimääräistä tilaa */
+    position: relative;         /* <-- ankkuri ilmoituslaatikolle */
+    display: grid;
     place-items: center;
-    padding: 0 1.5rem;       /* vaakatyhjää ok, ei pystysuunnassa */
-    overflow: hidden;        /* ei scrollia contentissa */
+    padding: 0 1.5rem;
+    overflow: hidden;
   }
 
   .footer {
@@ -77,4 +95,43 @@
     padding: 1rem 1.5rem;
   }
   .footer p { margin: 0; }
+
+  .notices {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: grid;
+    gap: .5rem;
+    z-index: 100;
+    pointer-events: none;       /* läpipäästö, paitsi .notice palauttaa klikit */
+  }
+  .notice {
+    pointer-events: auto;
+    min-width: 260px;
+    max-width: min(92vw, 420px);
+    background: #fff;
+    color: #111827;
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #6b7280; /* default */
+    border-radius: .65rem;
+    padding: .6rem .75rem;
+    box-shadow: 0 12px 28px rgba(0,0,0,.14);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: .5rem;
+    font-size: .95rem;
+  }
+  .notice.error   { border-left-color: #b00020; }
+  .notice.success { border-left-color: #10b981; }
+  .notice.info    { border-left-color: #3b82f6; }
+
+  .notice .text { line-height: 1.3; }
+  .notice .close {
+    all: unset;
+    cursor: pointer;
+    font-weight: 700;
+    padding: 0 .25rem;
+    line-height: 1;
+  }
 </style>

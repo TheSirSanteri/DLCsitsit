@@ -4,6 +4,7 @@
     import { api } from '$lib/api';
     import { goto } from '$app/navigation';
     import { get } from 'svelte/store';
+    import { notify } from '$lib/stores/notify';
 
     type Product = {
         id: string;
@@ -16,6 +17,7 @@
     let products: Product[] = [];
     let loading = true;
     let errorMsg = '';
+    let total = 0;
 
     // käyttäjän valitsemat tai aiemmasta varauksesta esitäytetyt määrät
     let quantities: Record<string, number> = {};
@@ -34,7 +36,8 @@
         // Lataa mahdollinen aiempi varaus ja esitäytä
         await preloadUserQuantities();
         } catch (err) {
-        errorMsg = (err as Error).message || 'Failed to load products';
+          errorMsg = (err as Error).message || 'Failed to load products';
+          notify.error(errorMsg);
         } finally {
         loading = false;
         }
@@ -149,8 +152,8 @@
 
     /* Reaktiivinen kokonaishinta */
     $: total = products.reduce((sum, p) => {
-    const q = getQty(p.id);
-    const price = typeof p.price === 'number' ? p.price : 0;
+    const q = quantities[p.id] ?? 0;
+    const price = Number.isFinite(p.price) ? p.price : 0;
     return sum + q * price;
     }, 0);
 
@@ -160,45 +163,46 @@
         .filter((it) => it.quantity > 0);
     }
 
-    async function reserve() {
+  async function reserve() {
     if (reserving) return;
     const items = buildReserveItems();
     reserveMsg = '';
-    reserveErr = '';
+    reserveErr = ''; // ei käytetä enää virheisiin
 
     if (items.length === 0) {
-        reserveErr = 'Add items first';
-        return;
+      notify.error('Add items first');
+      return;
     }
 
     reserving = true;
     try {
-        const data = await api<ReserveResponse>('/api/products/reserve', {
+      const data = await api<ReserveResponse>('/api/products/reserve', {
         method: 'POST',
         body: JSON.stringify(items)
-        });
+      });
 
-        if (!data.ok) {
-        reserveErr = data.error || 'Reservation failed';
+      if (!data.ok) {
+        notify.error(data.error || 'Reservation failed');
         return;
-        }
+      }
 
-        // Onnistui (täysi tai osittainen)
-        reserveMsg = data.message || (data.status === 'full' ? 'Products reserved successfully' : 'Products reserved partially');
+      // Onnistui
+      reserveMsg = data.message || (data.status === 'full'
+        ? 'Products reserved successfully'
+        : 'Products reserved partially');
 
-        // Päivitä määrät vastaamaan palvelimen hyväksymiä (data.items)
-        const next: Record<string, number> = {};
-        for (const it of data.items) next[it.productId] = it.quantity;
-        quantities = next;
+      const next: Record<string, number> = {};
+      for (const it of data.items) next[it.productId] = it.quantity;
+      quantities = next;
 
-        // Lataa tuotteet uudestaan, jotta saat päivitetyn "Available"-määrän
-        products = await api<Product[]>('/api/products', { method: 'GET' });
-    } catch (e) {
-        reserveErr = (e as Error).message || 'Reservation failed';
+      products = await api<Product[]>('/api/products', { method: 'GET' });
+    } catch (err) {
+      const msg = (err as Error).message || 'Reservation failed';
+      notify.error(msg);
     } finally {
-        reserving = false;
+      reserving = false;
     }
-    }
+  }
 </script>
 
 <section class="wrap" aria-labelledby="productsTitle">
@@ -278,13 +282,12 @@
     </button>
     </div>
 
-    <!-- Lyhyt tila-/virherivi -->
-    {#if reserveMsg || reserveErr}
+<!-- Näytetään alakulmassa vain onnistuminen -->
+  {#if reserveMsg}
     <div class="reserve-status" aria-live="polite">
-        {#if reserveMsg}<span class="ok">{reserveMsg}</span>{/if}
-        {#if reserveErr}<span class="err">{reserveErr}</span>{/if}
+      <span class="ok">{reserveMsg}</span>
     </div>
-    {/if}
+  {/if}
 </section>
 
 <style>
@@ -499,5 +502,4 @@
     font-size: .95rem;
   }
   .reserve-status .ok  { color: #0a7b27; font-weight: 700; }
-  .reserve-status .err { color: #b00020; font-weight: 700; }
 </style>
