@@ -1,167 +1,226 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import { auth } from '$lib/stores/auth';
-    import { api } from '$lib/api';
-    import { goto } from '$app/navigation';
-    import { get } from 'svelte/store';
-    import { notify } from '$lib/stores/notify';
+  import { onMount } from 'svelte';
+  import { auth } from '$lib/stores/auth';
+  import { api } from '$lib/api';
+  import { goto } from '$app/navigation';
+  import { get } from 'svelte/store';
+  import { notify } from '$lib/stores/notify';
 
-    type Product = {
-        id: string;
-        name: string;
-        available: number;
-        maxPerUser?: number; 
-        price: number;
-    };
+  type Product = {
+    id: string;
+    name: string;
+    available: number;
+    maxPerUser?: number;
+    price: number;
+  };
 
-    let products: Product[] = [];
-    let loading = true;
-    let errorMsg = '';
-    let total = 0;
+  let products: Product[] = [];
+  let loading = true;
+  let errorMsg = '';
+  let total = 0;
 
-    // käyttäjän valitsemat tai aiemmasta varauksesta esitäytetyt määrät
-    let quantities: Record<string, number> = {};
+  // käyttäjän valitsemat tai aiemmasta varauksesta esitäytetyt määrät
+  let quantities: Record<string, number> = {};
 
-    onMount(async () => {
-        const { token } = get(auth);
-        if (!token) {
-        goto('/');
-        return;
-        }
+  // --- UUTTA: uusin varaus banneria varten ---
+  type ReserveItem = { productId: string; quantity: number };
+  type LatestReservation = { reservedAt: string; items: ReserveItem[] };
+  let latestReservation: LatestReservation | null = null;
 
-        try {
-        // Hae tuotteet
-        products = await api<Product[]>('/api/products', { method: 'GET' });
+  // Reaktiivinen varauksen kokonaishinta nykyisellä hinnastolla
+  let reservedTotal = 0;
+  $: reservedTotal = latestReservation
+    ? latestReservation.items.reduce((sum, it) => {
+        const price = products.find((p) => p.id === it.productId)?.price ?? 0;
+        return sum + price * it.quantity;
+      }, 0)
+    : 0;
 
-        // Lataa mahdollinen aiempi varaus ja esitäytä
-        await preloadUserQuantities();
-        } catch (err) {
-          errorMsg = (err as Error).message || 'Failed to load products';
-          notify.error(errorMsg);
-        } finally {
-        loading = false;
-        }
-    });
-
-    async function preloadUserQuantities() {
-        // Yritetään useasta todennäköisestä päästä; jos mikään ei ole olemassa, oletus 0
-        const candidates = ['/api/me/reservations', '/api/me', '/api/users/me'];
-        for (const path of candidates) {
-        try {
-            const data = await api<any>(path, { method: 'GET' });
-            const extracted = extractQuantities(data);
-            if (Object.keys(extracted).length) {
-            // rajataan myös tuotteisiin, joita meillä on listassa
-            const ids = new Set(products.map((p) => p.id));
-            for (const [pid, q] of Object.entries(extracted)) {
-                if (ids.has(pid)) quantities[pid] = Math.max(0, q | 0);
-            }
-            return;
-            }
-        } catch {
-            // ei haittaa jos päätepistettä ei ole
-        }
-        }
+  onMount(async () => {
+    const { token } = get(auth);
+    if (!token) {
+      goto('/');
+      return;
     }
 
-    function extractQuantities(data: any): Record<string, number> {
-        const map: Record<string, number> = {};
+    try {
+      // Hae tuotteet
+      products = await api<Product[]>('/api/products', { method: 'GET' });
 
-        // tapa 1: { items: [{productId, quantity}] }
-        if (data && Array.isArray(data.items)) {
-        for (const it of data.items) {
-            if (it?.productId && Number.isFinite(it?.quantity)) map[it.productId] = it.quantity;
-        }
-        return map;
-        }
+      // Lataa mahdollinen aiempi varaus ja esitäytä
+      await preloadUserQuantities();
+    } catch (err) {
+      errorMsg = (err as Error).message || 'Failed to load products';
+      notify.error(errorMsg);
+    } finally {
+      loading = false;
+    }
+  });
 
-        // tapa 2: { reservations: [{ reservedAt, items: [...] }, ...] } -> uusin
-        if (data && Array.isArray(data.reservations) && data.reservations.length) {
-        let latest = data.reservations[0];
-        for (const r of data.reservations) {
-            if ((r?.reservedAt ?? '') > (latest?.reservedAt ?? '')) latest = r;
-        }
-        if (latest?.items && Array.isArray(latest.items)) {
-            for (const it of latest.items) {
-            if (it?.productId && Number.isFinite(it?.quantity)) map[it.productId] = it.quantity;
-            }
-            return map;
-        }
-        }
+  async function preloadUserQuantities() {
+    // Yritetään useasta todennäköisestä päästä; jos mikään ei ole olemassa, oletus 0
+    const candidates = ['/api/me/reservations', '/api/me', '/api/users/me'];
+    for (const path of candidates) {
+      try {
+        const data = await api<any>(path, { method: 'GET' });
 
-        // tapa 3: { reservedProducts: [{productId, quantity}] } (legacy)
-        if (data && Array.isArray(data.reservedProducts)) {
-        for (const it of data.reservedProducts) {
-            if (it?.productId && Number.isFinite(it?.quantity)) map[it.productId] = it.quantity;
-        }
-        return map;
+        // UUTTA: talleta uusin varaus banneria varten
+        const latest = findLatestReservation(data);
+        if (latest && (!latestReservation || latest.reservedAt > latestReservation.reservedAt)) {
+          latestReservation = latest;
         }
 
-        return map;
+        const extracted = extractQuantities(data);
+        if (Object.keys(extracted).length) {
+          // rajataan myös tuotteisiin, joita meillä on listassa
+          const ids = new Set(products.map((p) => p.id));
+          for (const [pid, q] of Object.entries(extracted)) {
+            if (ids.has(pid)) quantities[pid] = Math.max(0, q | 0);
+          }
+          return;
+        }
+      } catch {
+        // ei haittaa jos päätepistettä ei ole
+      }
+    }
+  }
+
+  // UUTTA: etsi uusin varaus tuetusta datamuodosta
+  function findLatestReservation(data: any): LatestReservation | null {
+    // tapa 2 (uusi malli): { reservations: [{ reservedAt, items: [...] }, ...] }
+    if (data && Array.isArray(data.reservations) && data.reservations.length) {
+      let latest = data.reservations[0];
+      for (const r of data.reservations) {
+        if ((r?.reservedAt ?? '') > (latest?.reservedAt ?? '')) latest = r;
+      }
+      if (latest?.items && Array.isArray(latest.items)) {
+        const items = latest.items
+          .filter((it: any) => it?.productId && Number.isFinite(it?.quantity))
+          .map((it: any) => ({ productId: it.productId, quantity: it.quantity }));
+        return { reservedAt: latest.reservedAt ?? '', items };
+      }
     }
 
-    function getQty(id: string) {
-        return quantities[id] ?? 0;
+    // tapa 1: suoraan { items: [...] }
+    if (data && Array.isArray(data.items)) {
+      const items = data.items
+        .filter((it: any) => it?.productId && Number.isFinite(it?.quantity))
+        .map((it: any) => ({ productId: it.productId, quantity: it.quantity }));
+      return { reservedAt: data.reservedAt ?? '', items };
     }
 
-    function maxAllowedFor(p: Product) {
+    // tapa 3 (legacy): { reservedProducts: [...] }
+    if (data && Array.isArray(data.reservedProducts)) {
+      const items = data.reservedProducts
+        .filter((it: any) => it?.productId && Number.isFinite(it?.quantity))
+        .map((it: any) => ({ productId: it.productId, quantity: it.quantity }));
+      return { reservedAt: '', items };
+    }
+
+    return null;
+  }
+
+  function extractQuantities(data: any): Record<string, number> {
+    const map: Record<string, number> = {};
+
+    // tapa 1: { items: [{productId, quantity}] }
+    if (data && Array.isArray(data.items)) {
+      for (const it of data.items) {
+        if (it?.productId && Number.isFinite(it?.quantity)) map[it.productId] = it.quantity;
+      }
+      return map;
+    }
+
+    // tapa 2: { reservations: [{ reservedAt, items: [...] }, ...] } -> uusin
+    if (data && Array.isArray(data.reservations) && data.reservations.length) {
+      let latest = data.reservations[0];
+      for (const r of data.reservations) {
+        if ((r?.reservedAt ?? '') > (latest?.reservedAt ?? '')) latest = r;
+      }
+      if (latest?.items && Array.isArray(latest.items)) {
+        for (const it of latest.items) {
+          if (it?.productId && Number.isFinite(it?.quantity)) map[it.productId] = it.quantity;
+        }
+        return map;
+      }
+    }
+
+    // tapa 3: { reservedProducts: [{productId, quantity}] } (legacy)
+    if (data && Array.isArray(data.reservedProducts)) {
+      for (const it of data.reservedProducts) {
+        if (it?.productId && Number.isFinite(it?.quantity)) map[it.productId] = it.quantity;
+      }
+      return map;
+    }
+
+    return map;
+  }
+
+  function getQty(id: string) {
+    return quantities[id] ?? 0;
+  }
+
+  function maxAllowedFor(p: Product) {
     const avail = Number.isFinite(p.available) ? p.available : 0;
     // maxPerUser > 0 → rajoita sen mukaan; 0 tai puuttuu → ei per-user -rajaa
-    const perUserCap = (typeof p.maxPerUser === 'number' && p.maxPerUser > 0)
-        ? p.maxPerUser
-        : Infinity;
+    const perUserCap =
+      typeof p.maxPerUser === 'number' && p.maxPerUser > 0 ? p.maxPerUser : Infinity;
 
     return Math.max(0, Math.min(avail, perUserCap));
-    }
+  }
 
-    function inc(p: Product) {
-        const q = getQty(p.id);
-        const cap = maxAllowedFor(p);
-        if (q < cap) quantities = { ...quantities, [p.id]: q + 1 };
-    }
+  function inc(p: Product) {
+    const q = getQty(p.id);
+    const cap = maxAllowedFor(p);
+    if (q < cap) quantities = { ...quantities, [p.id]: q + 1 };
+  }
 
-    function dec(p: Product) {
-        const q = getQty(p.id);
-        if (q > 0) quantities = { ...quantities, [p.id]: q - 1 };
-    }
+  function dec(p: Product) {
+    const q = getQty(p.id);
+    if (q > 0) quantities = { ...quantities, [p.id]: q - 1 };
+  }
 
-    function retry() {
-        location.reload();
-    }
+  function retry() {
+    location.reload();
+  }
 
-    function formatPrice(n: number | undefined) {
-        if (typeof n !== 'number' || !isFinite(n)) return '–';
-        return new Intl.NumberFormat('fi-FI', { style: 'currency', currency: 'EUR' }).format(n);
-    }
+  function formatPrice(n: number | undefined) {
+    if (typeof n !== 'number' || !isFinite(n)) return '–';
+    return new Intl.NumberFormat('fi-FI', { style: 'currency', currency: 'EUR' }).format(n);
+  }
 
-    type ReserveItem = { productId: string; quantity: number };
-    type ReserveResponse =
+  type ReserveResponse =
     | {
         ok: true;
-        status: "full" | "partial";
+        status: 'full' | 'partial';
         reservedAt: string;
         items: ReserveItem[];
         message: string;
-        partials?: Array<{ productId: string; requested: number; reserved: number; missing: number }>;
-        }
+        partials?: Array<{
+          productId: string;
+          requested: number;
+          reserved: number;
+          missing: number;
+        }>;
+      }
     | { ok: false; error: string };
 
-    let reserving = false;
-    let reserveMsg = '';
-    let reserveErr = '';
+  let reserving = false;
+  let reserveMsg = '';
+  let reserveErr = '';
 
-    /* Reaktiivinen kokonaishinta */
-    $: total = products.reduce((sum, p) => {
+  /* Reaktiivinen kokonaishinta */
+  $: total = products.reduce((sum, p) => {
     const q = quantities[p.id] ?? 0;
     const price = Number.isFinite(p.price) ? p.price : 0;
     return sum + q * price;
-    }, 0);
+  }, 0);
 
-    function buildReserveItems(): ReserveItem[] {
+  function buildReserveItems(): ReserveItem[] {
     return products
-        .map((p) => ({ productId: p.id, quantity: getQty(p.id) }))
-        .filter((it) => it.quantity > 0);
-    }
+      .map((p) => ({ productId: p.id, quantity: getQty(p.id) }))
+      .filter((it) => it.quantity > 0);
+  }
 
   async function reserve() {
     if (reserving) return;
@@ -187,14 +246,18 @@
       }
 
       // Onnistui
-      reserveMsg = data.message || (data.status === 'full'
-        ? 'Products reserved successfully'
-        : 'Products reserved partially');
+      reserveMsg =
+        data.message ||
+        (data.status === 'full' ? 'Products reserved successfully' : 'Products reserved partially');
 
       const next: Record<string, number> = {};
       for (const it of data.items) next[it.productId] = it.quantity;
       quantities = next;
 
+      // UUTTA: päivitä bannerille uusin varaus
+      latestReservation = { reservedAt: data.reservedAt, items: data.items };
+
+      // Päivitä tuotteiden saatavuus
       products = await api<Product[]>('/api/products', { method: 'GET' });
     } catch (err) {
       const msg = (err as Error).message || 'Reservation failed';
@@ -218,6 +281,29 @@
       <button class="retry" on:click={retry}>Retry</button>
     </div>
   {:else}
+    {#if latestReservation && latestReservation.items?.length}
+      <aside class="reservation-banner" role="status" aria-live="polite">
+        <p class="banner-text">
+          You have succesfully reserved prducts listed below. Remember to pay
+          {formatPrice(reservedTotal)} (ticket to inside included) to already given payment
+          information. You can change your reservation from down below.
+        </p>
+
+        <ul class="reslist" role="list">
+          {#each latestReservation.items as it (it.productId)}
+            {#if it.quantity > 0}
+              <li>
+                <span class="rname">
+                  {products.find((p) => p.id === it.productId)?.name ?? it.productId}
+                </span>
+                <span class="rqty">× {it.quantity}</span>
+              </li>
+            {/if}
+          {/each}
+        </ul>
+      </aside>
+    {/if}
+
     <ul class="grid" role="list">
       {#each products as p (p.id)}
         <li class="card" title={p.name} aria-label={p.name}>
@@ -233,56 +319,47 @@
               <span class="value">{p.available ?? 0}</span>
             </div>
             {#if typeof p.maxPerUser === 'number' && p.maxPerUser > 0}
-                <div class="stat">
-                    <span class="label">Max order</span>
-                    <span class="value">{Number.isFinite(p.maxPerUser as number) ? p.maxPerUser : '∞'}</span>
-                </div>
+              <div class="stat">
+                <span class="label">Max order</span>
+                <span class="value">{Number.isFinite(p.maxPerUser as number) ? p.maxPerUser : '∞'}</span>
+              </div>
             {/if}
           </div>
-            <div class="col price" aria-label="Price">
-                {formatPrice(p.price)}
-             </div>
+          <div class="col price" aria-label="Price">{formatPrice(p.price)}</div>
 
           <!-- Määräohjain -->
-            <div class="col qty" aria-label="Quantity selector">
-                {#key quantities[p.id]}
-                    <button
-                    class="btn minus"
-                    on:click={() => dec(p)}
-                    disabled={getQty(p.id) <= 0}
-                    aria-label="Decrease quantity"
-                    >−</button>
+          <div class="col qty" aria-label="Quantity selector">
+            {#key quantities[p.id]}
+              <button
+                class="btn minus"
+                on:click={() => dec(p)}
+                disabled={getQty(p.id) <= 0}
+                aria-label="Decrease quantity">−</button>
 
-                    <div class="count" aria-live="polite" aria-atomic="true">
-                    {getQty(p.id)}
-                    </div>
+              <div class="count" aria-live="polite" aria-atomic="true">{getQty(p.id)}</div>
 
-                    <button
-                    class="btn plus"
-                    on:click={() => inc(p)}
-                    disabled={getQty(p.id) >= maxAllowedFor(p)}
-                    aria-label="Increase quantity"
-                    >+</button>
-                {/key}
-            </div>
+              <button
+                class="btn plus"
+                on:click={() => inc(p)}
+                disabled={getQty(p.id) >= maxAllowedFor(p)}
+                aria-label="Increase quantity">+</button>
+            {/key}
+          </div>
         </li>
       {/each}
     </ul>
   {/if}
+
   <!-- Alakulman kokonaishinta + varaus -->
-    <div class="checkout" role="region" aria-label="Reservation summary">
+  <div class="checkout" role="region" aria-label="Reservation summary">
     <div class="total">{formatPrice(total)}</div>
 
-    <button
-        class="reserve"
-        on:click={reserve}
-        disabled={reserving || total <= 0}
-    >
-        {reserving ? 'Reserving…' : 'Reserve products'}
+    <button class="reserve" on:click={reserve} disabled={reserving || total <= 0}>
+      {reserving ? 'Reserving…' : 'Reserve products'}
     </button>
-    </div>
+  </div>
 
-<!-- Näytetään alakulmassa vain onnistuminen -->
+  <!-- Näytetään alakulmassa vain onnistuminen -->
   {#if reserveMsg}
     <div class="reserve-status" aria-live="polite">
       <span class="ok">{reserveMsg}</span>
@@ -340,6 +417,37 @@
     cursor: pointer;
   }
 
+  /* --- Varausilmoitus yläreunaan --- */
+  .reservation-banner {
+    margin-bottom: 1rem;
+    background: #fff;
+    border: 2px solid var(--violet);
+    border-radius: .9rem;
+    padding: .9rem 1rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  }
+  .banner-text {
+    margin: 0 0 .6rem;
+    font-weight: 700;
+    color: var(--violet);
+    line-height: 1.25;
+  }
+  .reslist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: .4rem .8rem;
+  }
+  .reslist li {
+    display: flex;
+    align-items: baseline;
+    gap: .5rem;
+  }
+  .rname { font-weight: 700; }
+  .rqty  { opacity: .9; }
+
   /* --- LISTAUS --- */
   .grid {
     display: flex;
@@ -350,15 +458,15 @@
     list-style: none;
     justify-content: flex-start; /* desktop: vasemmasta reunasta */
   }
- @media (max-width: 700px) {
-  .card {
-    min-width: 320px;
-    grid-template-columns: 1fr auto auto auto;
-    gap: .8rem;
+  @media (max-width: 700px) {
+    .card {
+      min-width: 320px;
+      grid-template-columns: 1fr auto auto auto;
+      gap: .8rem;
+    }
+    .namecol .name,
+    .price { font-size: 1.5rem; }
   }
-  .namecol .name,
-  .price { font-size: 1.5rem; }
-}
 
   .card {
     /* riittävästi leveyttä, jotta [-][n][+] mahtuu */
@@ -412,7 +520,7 @@
     display: grid;
     grid-template-columns: auto auto auto;
     align-items: center;
-    gap: .3rem; 
+    gap: .3rem;
   }
   .btn {
     width: 36px;
@@ -469,26 +577,26 @@
     box-shadow: 0 10px 28px rgba(0,0,0,.14);
   }
 
-.total {
-  font-weight: 800;
-  font-size: 1.25rem;               /* isompi */
-  min-width: 8ch;
-  text-align: right;
-}
+  .total {
+    font-weight: 800;
+    font-size: 1.25rem;               /* isompi */
+    min-width: 8ch;
+    text-align: right;
+  }
 
-.reserve {
-  background: var(--violet);
-  color: #fff;
-  border: none;
-  border-radius: .8rem;
-  padding: .75rem 1.1rem;           /* isompi */
-  font-weight: 700;
-  font-size: 1rem;                   /* isompi */
-  cursor: pointer;
-}
-.reserve:disabled { opacity: .6; cursor: default; }
+  .reserve {
+    background: var(--violet);
+    color: #fff;
+    border: none;
+    border-radius: .8rem;
+    padding: .75rem 1.1rem;           /* isompi */
+    font-weight: 700;
+    font-size: 1rem;                   /* isompi */
+    cursor: pointer;
+  }
+  .reserve:disabled { opacity: .6; cursor: default; }
 
-/* Varausviestit */
+  /* Varausviestit */
   .reserve-status {
     position: fixed;
     right: max(1rem, env(safe-area-inset-right));
@@ -501,5 +609,5 @@
     box-shadow: 0 8px 24px rgba(0,0,0,.12);
     font-size: .95rem;
   }
-  .reserve-status .ok  { color: #0a7b27; font-weight: 700; }
+  .reserve-status .ok { color: #0a7b27; font-weight: 700; }
 </style>

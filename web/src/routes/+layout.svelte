@@ -2,7 +2,24 @@
   import favicon from '$lib/assets/favicon.svg';
   import { notices } from '$lib/stores/notify';
   import { fly } from 'svelte/transition';
+  import { api } from '$lib/api';
+  import { auth } from '$lib/stores/auth';
+  import { goto } from '$app/navigation';
+  import { notify } from '$lib/stores/notify';
+
   let { children } = $props();
+
+  async function doLogout() {
+    try {
+      await api('/api/logout', { method: 'POST' });
+    } catch {
+      // sallitaan uloskirjautuminen client-puolella vaikka backend ei vastaisi
+    } finally {
+      auth.update((v: any) => ({ ...v, token: null }));
+      notify.info('Logged out');
+      goto('/');
+    }
+  }
 </script>
 
 <svelte:head>
@@ -15,6 +32,12 @@
 <div class="app">
   <header class="header">
     <h1>DLC-sitsit</h1>
+
+    {#if $auth?.token}
+      <button class="logout-btn" type="button" onclick={doLogout} aria-label="Log out">
+        Log out
+      </button>
+    {/if}
   </header>
 
   <main class="content">
@@ -49,9 +72,7 @@
     --footer-border: #d1d5db;
   }
 
-  :global(html, body) {
-    height: 100%;
-  }
+  :global(html, body) { height: 100%; }
   :global(body) {
     margin: 0;
     box-sizing: border-box;
@@ -63,7 +84,7 @@
   .app {
     display: grid;
     grid-template-rows: auto 1fr auto; /* header | content | footer */
-    height: 100dvh;                    /* täsmälleen näkymäkorkeus */
+    height: 100dvh;
     width: 100%;
   }
 
@@ -72,7 +93,11 @@
   .header {
     background-color: var(--violet);
     color: white;
-    padding: 1.25rem 1.5rem; /* hieman isompi header */
+    padding: 1.25rem 1.5rem;
+    display: flex;                 /* aseta otsikko vasemmalle, nappi oikealle */
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
   }
   .header h1 {
     margin: 0;
@@ -80,8 +105,32 @@
     font-size: clamp(1.25rem, 2.2vw + 0.8rem, 1.8rem);
   }
 
+  .logout-btn {
+    appearance: none;
+    background: transparent;
+    color: #fff;
+    border: 1.5px solid rgba(255,255,255,.7);
+    border-radius: .65rem;
+    padding: .45rem .75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .06s ease, background .15s ease, border-color .15s ease;
+    white-space: nowrap;
+  }
+  .logout-btn:hover {
+    background: rgba(255,255,255,.12);
+    border-color: #fff;
+  }
+  .logout-btn:active {
+    transform: translateY(1px);
+  }
+  .logout-btn:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+
   .content {
-    position: relative;         /* <-- ankkuri ilmoituslaatikolle */
+    position: relative; /* ankkuri ilmoituslaatikolle */
     display: grid;
     place-items: center;
     padding: 0 1.5rem;
@@ -103,7 +152,7 @@
     display: grid;
     gap: .5rem;
     z-index: 100;
-    pointer-events: none;       /* läpipäästö, paitsi .notice palauttaa klikit */
+    pointer-events: none; /* läpipäästö, paitsi .notice palauttaa klikit */
   }
   .notice {
     pointer-events: auto;

@@ -42,7 +42,7 @@ export async function loginHandler(ctx: Context) {
   const user = users.find((u) => u.username === username);
   if (!user || user.password !== password) {
     ctx.response.status = 401;
-    ctx.response.body = { error: "invalid credentials" };
+    ctx.response.body = { error: "Wrong username or password" };
     return;
   }
 
