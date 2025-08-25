@@ -2,43 +2,49 @@
   {
     "id": "1",
     "name": "Table wear",
-    "available": 14,
+    "available": 13,
     "maxPerUser": 2,
-    "price": 0.6
+    "price": 0.6,
+    "info": "Includes plate, knife, fork, spoon and glass"
   },
   {
     "id": "2",
     "name": "Chair",
-    "available": 38,
-    "maxPerUser": 0,
-    "price": 0.6
+    "available": 36,
+    "maxPerUser": 7,
+    "price": 0.6,
+    "info": "A comfortable chair to sit on"
   },
   {
     "id": "3",
     "name": "Starter food",
-    "available": 20,
+    "available": 14,
     "maxPerUser": 0,
-    "price": 0.6
+    "price": 2.8,
+    "info": "A delicious starter to begin your meal"
   },
   {
     "id": "4",
     "name": "Main course",
-    "available": 21,
-    "maxPerUser": 0,
-    "price": 0.6
+    "available": 18,
+    "maxPerUser": 12,
+    "price": 4,
+    "info": "A hearty main course to satisfy your hunger"
   },
   {
     "id": "5",
     "name": "Dessert",
     "available": 21,
     "maxPerUser": 0,
-    "price": 0.6
+    "price": 0.6,
+    "info": "A sweet dessert to finish your meal"
   },
   {
     "id": "6",
     "name": "Place at the table",
     "available": 22,
     "maxPerUser": 0,
-    "price": 0.6
+    "price": 2.6,
+    "info": "A reserved place at the table for you"
   }
 ]

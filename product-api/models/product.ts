@@ -2,8 +2,9 @@ export interface Product {
   id: string;
   name: string;
   available: number;
-  maxPerUser: number; //0 = there is no limit, >= 0 there is limit
+  maxPerUser: number; // optional, 0 = infinite
   price: number;
+  info: string;
 };
 
 export interface ReservationItem {

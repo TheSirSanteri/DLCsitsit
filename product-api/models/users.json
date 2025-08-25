@@ -7,23 +7,23 @@
     "reservedProducts": [],
     "reservations": [
       {
-        "reservedAt": "2025-08-22T14:31:52.527Z",
+        "reservedAt": "2025-08-25T00:15:28.017Z",
         "items": [
           {
             "productId": "1",
-            "quantity": 1
+            "quantity": 2
           },
           {
             "productId": "2",
-            "quantity": 4
+            "quantity": 6
           },
           {
             "productId": "3",
-            "quantity": 1
+            "quantity": 7
           },
           {
             "productId": "4",
-            "quantity": 2
+            "quantity": 5
           },
           {
             "productId": "5",

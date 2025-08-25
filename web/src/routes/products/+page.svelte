@@ -12,6 +12,7 @@
     available: number;
     maxPerUser?: number;
     price: number;
+    info: string;
   };
 
   let products: Product[] = [];
@@ -307,28 +308,35 @@
     <ul class="grid" role="list">
       {#each products as p (p.id)}
         <li class="card" title={p.name} aria-label={p.name}>
-          <!-- Nimi -->
-          <div class="col namecol">
+          <!-- Vasen ylä: nimi -->
+          <div class="namecol">
             <span class="name">{p.name}</span>
           </div>
 
-          <!-- Tilastot: available & max order päällekkäin -->
-          <div class="col stats">
+          <!-- Nimen oikealle puolelle päällekkäin: Available & Max order -->
+          <div class="stats">
             <div class="stat">
-              <span class="label">Available</span>
+              <span class="label">Available:</span>
               <span class="value">{p.available ?? 0}</span>
             </div>
             {#if typeof p.maxPerUser === 'number' && p.maxPerUser > 0}
               <div class="stat">
-                <span class="label">Max order</span>
-                <span class="value">{Number.isFinite(p.maxPerUser as number) ? p.maxPerUser : '∞'}</span>
+                <span class="label">Max order:</span>
+                <span class="value">
+                  {Number.isFinite(p.maxPerUser as number) ? p.maxPerUser : '∞'}
+                </span>
               </div>
             {/if}
           </div>
-          <div class="col price" aria-label="Price">{formatPrice(p.price)}</div>
 
-          <!-- Määräohjain -->
-          <div class="col qty" aria-label="Quantity selector">
+          <!-- Oikea ylä: hinta -->
+          <div class="price" aria-label="Price">{formatPrice(p.price)}</div>
+
+          <!-- Vasen ala: uuden "info"-kentän teksti, 2 riviin -->
+          <div class="info" aria-label="Product info">{p.info || ''}</div>
+
+          <!-- Oikea ala: määräohjain -->
+          <div class="qty" aria-label="Quantity selector">
             {#key quantities[p.id]}
               <button
                 class="btn minus"
@@ -368,7 +376,10 @@
 </section>
 
 <style>
-  /* Tälle sivulle sallitaan scroll tarvittaessa */
+  :root {
+  --stats-nudge: .5rem; 
+  }
+
   :global(.content) {
     display: block;
     padding: 1.5rem;
@@ -458,35 +469,33 @@
     list-style: none;
     justify-content: flex-start; /* desktop: vasemmasta reunasta */
   }
-  @media (max-width: 700px) {
-    .card {
-      min-width: 320px;
-      grid-template-columns: 1fr auto auto auto;
-      gap: .8rem;
-    }
-    .namecol .name,
-    .price { font-size: 1.5rem; }
-  }
 
   .card {
     /* riittävästi leveyttä, jotta [-][n][+] mahtuu */
-    flex: 1 1 420px;      /* basis 420px, saa kasvaa ja kutistua */
-    min-width: 400px;     /* estää liian kapean kortin desktopilla */
+    flex: 1 1 460px;      /* basis 420px, saa kasvaa ja kutistua */
+    min-width: 420px;     /* estää liian kapean kortin desktopilla */
 
     background: var(--violet-dark);
     color: var(--fg);
     border-radius: .9rem;
     padding: 1rem;
-    min-height: 100px;
+    min-height: 120px;
 
     display: grid;
-    grid-template-columns: 1.25fr auto auto auto; /* nimi | stats | qty | hinta */
-    align-items: center;
-    gap: 1rem;
+    grid-template-columns: 1fr max-content max-content;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "name stats price"
+      "info info qty";
+    align-items: start;
+    gap: .7rem 1rem;
+    column-gap: .1rem; /* pienempi väli stats ↔ price */
 
     box-shadow: 0 2px 10px rgba(0,0,0,.06);
+ /* ennen: 1.5fr 1fr auto */
   }
 
+  .namecol { grid-area: name; }
   .namecol .name {
     font-size: 1.8rem;
     font-weight: 800;
@@ -498,30 +507,36 @@
   }
 
   .stats {
+    grid-area: stats;
     display: grid;
-    gap: .25rem;
-  }
-  .stat {
-    display: grid;
-    grid-auto-flow: column;
-    align-items: baseline;
-    gap: .4rem;
-  }
-  .label {
-    font-size: .8rem;
-    opacity: .9;
-  }
-  .value {
-    font-weight: 800;
+    row-gap: .15rem;
+    column-gap: .12rem;
+    padding-left: var(--stats-nudge, .5rem); /* ← siirto oikealle */
   }
 
+  .stats {
+    grid-area: stats;
+    display: grid;
+    row-gap: .15rem;
+    column-gap: .12rem;
+    justify-self: end;     /* vie lohko aivan oikeaan laitaan omassa kolumnissaan */
+    width: max-content;    /* ei veny turhaan */
+    padding-left: 0;       /* poista aiempi siirto, jos sitä käytettiin */
+  }
+
+  .label { font-size: .8rem; opacity: .9; }
+  .value { font-weight: 800; white-space: nowrap; }
+
   .qty {
-    grid-column: 3;
+    grid-area: qty;
+    justify-self: end;
+    align-self: end;
     display: grid;
     grid-template-columns: auto auto auto;
     align-items: center;
     gap: .3rem;
   }
+
   .btn {
     width: 36px;
     height: 36px;
@@ -536,10 +551,12 @@
     display: grid;
     place-items: center;
   }
+
   .btn:disabled {
     opacity: .4;
     cursor: default;
   }
+
   .count {
     min-width: 40px;
     padding: .35rem .5rem;
@@ -551,12 +568,30 @@
   }
 
   .price {
-    grid-column: 4;
+    grid-area: price;
     justify-self: end;
-    font-size: 1.8rem;   /* sama kuin .namecol .name */
+    font-size: 1.8rem;   /* sama kuin nimi */
     font-weight: 800;
     line-height: 1.15;
     white-space: nowrap;
+  }
+ 
+  .info {
+    grid-area: info;
+    font-size: .85rem;
+    opacity: .95;
+    line-height: 1.25;
+
+    /* Standardi (uudemmat selaimet) — laita ENSIN */
+    line-clamp: 2;
+
+    /* WebKit-fallback (nykyinen laajin tuki) */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+
+    overflow: hidden;
+    min-height: calc(2 * 1.25em); /* varaa tilaa kahdelle riville */
   }
 
   .checkout {
@@ -610,4 +645,18 @@
     font-size: .95rem;
   }
   .reserve-status .ok { color: #0a7b27; font-weight: 700; }
+
+
+  @media (max-width: 700px) {
+    .card {
+      grid-template-columns: minmax(0, 1fr) max-content; /* vasen joustava, hinta sisällön levyinen */
+      column-gap: .05rem;                                 /* tiiviimpi väli vasen ↔ oikea */
+      grid-template-areas:
+        "name price"
+        "stats price"
+        "info qty";
+    }
+    .stats { justify-self: end; }  /* pidä stats aivan oikeassa laidassa vasemmassa kolumnissa */
+  }
+
 </style>
