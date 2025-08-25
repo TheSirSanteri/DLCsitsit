@@ -207,8 +207,6 @@
     | { ok: false; error: string };
 
   let reserving = false;
-  let reserveMsg = '';
-  let reserveErr = '';
 
   /* Reaktiivinen kokonaishinta */
   $: total = products.reduce((sum, p) => {
@@ -226,8 +224,6 @@
   async function reserve() {
     if (reserving) return;
     const items = buildReserveItems();
-    reserveMsg = '';
-    reserveErr = ''; // ei käytetä enää virheisiin
 
     if (items.length === 0) {
       notify.error('Add items first');
@@ -246,16 +242,18 @@
         return;
       }
 
-      // Onnistui
-      reserveMsg =
+      // Onnistui → näytä notices-alueella
+      const msg =
         data.message ||
         (data.status === 'full' ? 'Products reserved successfully' : 'Products reserved partially');
+      notify.success(msg);
 
+      // Synkkaa määrät UI:hin
       const next: Record<string, number> = {};
       for (const it of data.items) next[it.productId] = it.quantity;
       quantities = next;
 
-      // UUTTA: päivitä bannerille uusin varaus
+      // Päivitä bannerille uusin varaus
       latestReservation = { reservedAt: data.reservedAt, items: data.items };
 
       // Päivitä tuotteiden saatavuus
@@ -366,13 +364,6 @@
       {reserving ? 'Reserving…' : 'Reserve products'}
     </button>
   </div>
-
-  <!-- Näytetään alakulmassa vain onnistuminen -->
-  {#if reserveMsg}
-    <div class="reserve-status" aria-live="polite">
-      <span class="ok">{reserveMsg}</span>
-    </div>
-  {/if}
 </section>
 
 <style>
@@ -630,33 +621,4 @@
     cursor: pointer;
   }
   .reserve:disabled { opacity: .6; cursor: default; }
-
-  /* Varausviestit */
-  .reserve-status {
-    position: fixed;
-    right: max(1rem, env(safe-area-inset-right));
-    bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 64px);
-    z-index: 40;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: .7rem;
-    padding: .4rem .6rem;
-    box-shadow: 0 8px 24px rgba(0,0,0,.12);
-    font-size: .95rem;
-  }
-  .reserve-status .ok { color: #0a7b27; font-weight: 700; }
-
-
-  @media (max-width: 700px) {
-    .card {
-      grid-template-columns: minmax(0, 1fr) max-content; /* vasen joustava, hinta sisällön levyinen */
-      column-gap: .05rem;                                 /* tiiviimpi väli vasen ↔ oikea */
-      grid-template-areas:
-        "name price"
-        "stats price"
-        "info qty";
-    }
-    .stats { justify-self: end; }  /* pidä stats aivan oikeassa laidassa vasemmassa kolumnissa */
-  }
-
 </style>

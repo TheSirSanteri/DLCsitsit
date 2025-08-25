@@ -34,7 +34,7 @@
   {
     "id": "5",
     "name": "Dessert",
-    "available": 21,
+    "available": 23,
     "maxPerUser": 0,
     "price": 0.6,
     "info": "A sweet dessert to finish your meal"
@@ -42,7 +42,7 @@
   {
     "id": "6",
     "name": "Place at the table",
-    "available": 22,
+    "available": 23,
     "maxPerUser": 0,
     "price": 2.6,
     "info": "A reserved place at the table for you"
