@@ -14,8 +14,7 @@ export type User = {
   name: string;
   email: string;
   password: string;
-  reservedProducts: ReservedProduct[]; // legacy
-  reservations?: UserReservation[];    // new
+  reservations?: UserReservation[];    // reservation
 };
 
 // --- IO-apurit Deno-ympäristöön ---

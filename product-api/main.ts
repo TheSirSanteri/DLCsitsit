@@ -2,6 +2,7 @@ import { Application, Router, Context } from "@oak/oak";
 import { loginHandler, logoutHandler, authMiddleware } from "./auth/auth.ts";
 import { isReservationArray } from "./models/product.ts";
 import { getUserReservations } from "./models/users.ts";
+import { getReservationGate, readConfig, writeConfig } from "./models/config.ts";
 import { reserveProductsAsOneOperationFlexible, listProducts } from "./controllers/productController.ts";
 import { oakCors } from "@tajpouria/cors";
 
@@ -18,11 +19,35 @@ router.get("/api/health", (ctx: Context) => {
 router.post("/api/login", loginHandler);
 router.post("/api/logout", logoutHandler);
 
+router.get("/api/reservations/window", async (ctx: Context) => {
+  const gate = await getReservationGate();
+  ctx.response.status = 200;
+  ctx.response.body = gate; // { canReserve, opensAt, now }
+});
+
 // Show all products
 router.get("/api/products", async (ctx: Context) => {
   const products = await listProducts();
   ctx.response.status = 200;
   ctx.response.body = products;
+});
+
+// Checks time window for reservations
+router.use("/api/products/reserve", async (ctx: Context, next) => {
+  if (ctx.request.method.toUpperCase() === "POST") {
+    const gate = await getReservationGate();
+    if (!gate.canReserve) {
+      ctx.response.status = 403;
+      ctx.response.body = {
+        error: "reservations_not_open",
+        message: "Reservations have not opened yet.",
+        opensAt: gate.opensAt,
+        now: gate.now,
+      };
+      return;
+    }
+  }
+  await next();
 });
 
 // Reservation (protected)

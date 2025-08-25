@@ -4,7 +4,6 @@
     "name": "Testi Käyttäjä",
     "email": "testaaja@gamil.com",
     "password": "XCV12345",
-    "reservedProducts": [],
     "reservations": [
       {
         "reservedAt": "2025-08-25T01:15:54.237Z",
@@ -34,17 +33,6 @@
     "name": "2Testi Käyttäjä",
     "email": "2testaaja@gamil.com",
     "password": "XCT12345",
-    "reservedProducts": [],
-    "reservations": [
-      {
-        "reservedAt": "2025-08-22T15:03:06.446Z",
-        "items": [
-          {
-            "productId": "1",
-            "quantity": 1
-          }
-        ]
-      }
-    ]
+    "reservations": []
   }
 ]

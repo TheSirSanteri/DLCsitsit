@@ -16,26 +16,51 @@
     successMsg = '';
     loading = true;
 
+    // Apufunktio aikaleiman näyttöön
+    function formatTs(iso: string | null) {
+      if (!iso) return 'now';
+      const d = new Date(iso);
+      return new Intl.DateTimeFormat('fi-FI', {
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+      }).format(d);
+    }
+
+    type Gate = { canReserve: boolean; opensAt: string | null; now: string };
+
     try {
-      const data = await api<any>('/api/login', {
+      // 1) Kirjautuminen
+      const login = await api<any>('/api/login', {
         method: 'POST',
         body: JSON.stringify({ username, password })
       });
-      const token = data?.token ?? data?.jwt ?? data?.accessToken;
-      const uname = data?.username ?? data?.user?.username ?? username;
+
+      const token = login?.token ?? login?.jwt ?? login?.accessToken;
+      const uname = login?.username ?? login?.user?.username ?? username;
       if (!token) throw new Error('Login response missing token');
+
+      // 2) Talleta auth-storeen
       auth.set({ token, username: uname });
-      successMsg = 'Logged in successfully.';
-      // siirry tuotteisiin
-      goto('/products');
+
+      // 3) Kysy portti bäkkäristä
+      const gate = await api<Gate>('/api/reservations/window', { method: 'GET' });
+
+      // 4) Reititys
+      if (gate?.canReserve) {
+        successMsg = 'Logged in successfully.';
+        goto('/products');
+      } else {
+        notify.info(`reservations starts at ${formatTs(gate?.opensAt ?? null)}`);
+        // jäädään login-sivulle, mutta käyttäjä on kirjautunut (näkee esim. Logout-napin)
+      }
     } catch (err) {
       const msg = (err as Error).message || 'Login failed';
-      errorMsg = '';            // (valinnainen) tyhjennä vanha inline
+      errorMsg = '';  // inline-viesti tyhjäksi, käytetään notifya
       notify.error(msg);
     } finally {
       loading = false;
     }
   }
+
 </script>
 
 <!-- Content keskitetään layoutin gridissä; tämä elementti saa kaiken käytettävissä olevan korkeuden -->
@@ -43,7 +68,7 @@
   <h1 id="welcomeTitle" class="title">
     Welcome to the reservation tool for DLC-sitsis
   </h1>
-  <p class="subtitle">please sign in first.</p>
+  <p class="subtitle">please login first.</p>
 
   <form class="login-form" on:submit={onSubmit}>
     <label>
