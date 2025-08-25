@@ -2,42 +2,42 @@
   {
     "id": "1",
     "name": "Table wear",
-    "available": 14,
+    "available": 15,
     "maxPerUser": 2,
     "price": 0.6
   },
   {
     "id": "2",
     "name": "Chair",
-    "available": 38,
+    "available": 43,
     "maxPerUser": 0,
     "price": 0.6
   },
   {
     "id": "3",
     "name": "Starter food",
-    "available": 20,
+    "available": 23,
     "maxPerUser": 0,
     "price": 0.6
   },
   {
     "id": "4",
     "name": "Main course",
-    "available": 21,
+    "available": 23,
     "maxPerUser": 0,
     "price": 0.6
   },
   {
     "id": "5",
     "name": "Dessert",
-    "available": 21,
+    "available": 23,
     "maxPerUser": 0,
     "price": 0.6
   },
   {
     "id": "6",
     "name": "Place at the table",
-    "available": 22,
+    "available": 23,
     "maxPerUser": 0,
     "price": 0.6
   }

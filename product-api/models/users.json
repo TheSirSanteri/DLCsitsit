@@ -7,30 +7,10 @@
     "reservedProducts": [],
     "reservations": [
       {
-        "reservedAt": "2025-08-22T14:31:52.527Z",
+        "reservedAt": "2025-08-22T15:03:34.946Z",
         "items": [
           {
             "productId": "1",
-            "quantity": 1
-          },
-          {
-            "productId": "2",
-            "quantity": 4
-          },
-          {
-            "productId": "3",
-            "quantity": 1
-          },
-          {
-            "productId": "4",
-            "quantity": 2
-          },
-          {
-            "productId": "5",
-            "quantity": 1
-          },
-          {
-            "productId": "6",
             "quantity": 1
           }
         ]
@@ -45,22 +25,10 @@
     "reservedProducts": [],
     "reservations": [
       {
-        "reservedAt": "2025-08-22T14:52:47.522Z",
+        "reservedAt": "2025-08-22T15:03:06.446Z",
         "items": [
           {
             "productId": "1",
-            "quantity": 2
-          },
-          {
-            "productId": "2",
-            "quantity": 1
-          },
-          {
-            "productId": "3",
-            "quantity": 2
-          },
-          {
-            "productId": "5",
             "quantity": 1
           }
         ]
