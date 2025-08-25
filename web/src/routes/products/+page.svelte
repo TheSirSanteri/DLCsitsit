@@ -283,9 +283,9 @@
     {#if latestReservation && latestReservation.items?.length}
       <aside class="reservation-banner" role="status" aria-live="polite">
         <p class="banner-text">
-          You have succesfully reserved prducts listed below. Remember to pay
-          {formatPrice(reservedTotal)} (ticket to inside included) to already given payment
-          information. You can change your reservation from down below.
+          You have succesfully reserved prducts listed below.<br> 
+          Remember to pay {formatPrice(reservedTotal)} (ticket to inside included) to already given payment information.<br>
+          You can change your reservation from down below.
         </p>
 
         <ul class="reslist" role="list">
@@ -374,7 +374,7 @@
   :global(.content) {
     display: block;
     padding: 1.5rem;
-    padding-bottom: 160px;
+    padding-bottom: max(220px, env(safe-area-inset-bottom) + 220px); 
     overflow: auto;
   }
 
@@ -429,26 +429,34 @@
     box-shadow: 0 2px 10px rgba(0,0,0,.06);
   }
   .banner-text {
-    margin: 0 0 .6rem;
+    margin: 0 0 1rem;
     font-weight: 700;
     color: var(--violet);
     line-height: 1.25;
   }
+
   .reslist {
     list-style: none;
     padding: 0;
     margin: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: .4rem .8rem;
-  }
-  .reslist li {
     display: flex;
+    flex-direction: column;
+    gap: .14rem;
+  }
+  
+  .reslist li {
+    display: inline-flex;
     align-items: baseline;
-    gap: .5rem;
+    justify-content: flex-start; /* <-- pois space-between */
+    gap: .35rem;                 /* pieni väli nimen ja määrän väliin */
+    margin: 0;
+    padding: 0;
   }
   .rname { font-weight: 700; }
-  .rqty  { opacity: .9; }
+  .rqty {
+    opacity: .9;
+    white-space: nowrap;
+  }
 
   /* --- LISTAUS --- */
   .grid {
@@ -621,4 +629,17 @@
     cursor: pointer;
   }
   .reserve:disabled { opacity: .6; cursor: default; }
+
+  @media (max-width: 520px) {
+    .grid { gap: .7rem; }
+    .card {
+      flex: 1 1 100%;
+      min-width: 100%;  /* ohita 420px minimi pienillä ruuduilla */
+    }
+  }
+  @media (max-width: 360px) {
+    .card {
+      min-width: 0;     /* varmistaa ettei mikään pakota vaakaskrollia */
+    }
+  }
 </style>

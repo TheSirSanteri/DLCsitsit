@@ -134,7 +134,9 @@
     display: grid;
     place-items: center;
     padding: 0 1.5rem;
-    overflow: hidden;
+    overflow: auto;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
   }
 
   .footer {
