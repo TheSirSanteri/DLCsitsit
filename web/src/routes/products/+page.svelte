@@ -248,6 +248,19 @@
         (data.status === 'full' ? 'Products reserved successfully' : 'Products reserved partially');
       notify.success(msg);
 
+      if (data.status === 'partial' && data.partials?.length) {
+        for (const p of data.partials) {
+          const name = products.find((x) => x.id === p.productId)?.name ?? `#${p.productId}`;
+          if (p.reserved > 0) {
+            // osittain onnistunut
+            notify.info(`Could reserve ${name} only ${p.reserved} (requested ${p.requested})`, 6000);
+          } else {
+            // täysin epäonnistunut
+          notify.error(`Could not reserve ${name} (requested ${p.requested})`, 7000);
+          }
+        }
+      }
+
       // Synkkaa määrät UI:hin
       const next: Record<string, number> = {};
       for (const it of data.items) next[it.productId] = it.quantity;

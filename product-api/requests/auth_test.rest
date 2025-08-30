@@ -1,7 +1,7 @@
 
 ### API base
 @baseUrl = http://localhost:8000
-@Token = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiIxIiwiZXhwIjoxNzU1ODc5OTQwfQ.TDDxMoSspn98pgmjDg2fJxQwXdsR4DrXRpfHveTfYu8
+@Token = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiIxIiwiZXhwIjoxNzU2MzI3NjQyfQ.Dr9rSd4S-Q_DX_IrEvNSZv3TEriLKlV1JgjdW9LSi5w
 
 ### 1) Health check
 GET {{baseUrl}}/api/health

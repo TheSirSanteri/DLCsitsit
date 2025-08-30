@@ -6,23 +6,27 @@
     "password": "XCV12345",
     "reservations": [
       {
-        "reservedAt": "2025-08-25T01:15:54.237Z",
+        "reservedAt": "2025-08-30T10:12:34.001Z",
         "items": [
           {
+            "productId": "1",
+            "quantity": 2
+          },
+          {
             "productId": "2",
-            "quantity": 6
+            "quantity": 2
           },
           {
             "productId": "3",
-            "quantity": 7
+            "quantity": 3
           },
           {
             "productId": "4",
-            "quantity": 5
+            "quantity": 3
           },
           {
             "productId": "5",
-            "quantity": 1
+            "quantity": 4
           }
         ]
       }
@@ -33,6 +37,28 @@
     "name": "2Testi Käyttäjä",
     "email": "2testaaja@gamil.com",
     "password": "XCT12345",
-    "reservations": []
+    "reservations": [
+      {
+        "reservedAt": "2025-08-26T20:46:06.256Z",
+        "items": [
+          {
+            "productId": "1",
+            "quantity": 2
+          },
+          {
+            "productId": "4",
+            "quantity": 2
+          },
+          {
+            "productId": "5",
+            "quantity": 2
+          },
+          {
+            "productId": "6",
+            "quantity": 2
+          }
+        ]
+      }
+    ]
   }
 ]
