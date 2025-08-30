@@ -3,12 +3,24 @@
   import { api } from '$lib/api';
   import { goto } from '$app/navigation';
   import { notify } from '$lib/stores/notify';
+  import { onMount } from 'svelte';
 
   let username = '';
   let password = '';
   let loading = false;
   let errorMsg = '';
   let successMsg = '';
+  let showCookieNotice = false;
+
+  onMount(() => {
+    // Show cookie, if not acknowledged before
+    showCookieNotice = localStorage.getItem('cookieNoticeDismissed') !== '1';
+  });
+
+  function dismissCookieNotice() {
+    localStorage.setItem('cookieNoticeDismissed', '1');
+    showCookieNotice = false;
+  }
 
   async function onSubmit(e: SubmitEvent) {
     e.preventDefault();
@@ -50,11 +62,11 @@
         goto('/products');
       } else {
         notify.info(`reservations starts at ${formatTs(gate?.opensAt ?? null)}`);
-        // jäädään login-sivulle, mutta käyttäjä on kirjautunut (näkee esim. Logout-napin)
+        // We stay at loginpage even if user has loged in.
       }
     } catch (err) {
       const msg = (err as Error).message || 'Login failed';
-      errorMsg = '';  // inline-viesti tyhjäksi, käytetään notifya
+      errorMsg = '';  // Inline-message empty. Use Notify
       notify.error(msg);
     } finally {
       loading = false;
@@ -65,6 +77,17 @@
 
 <!-- Content keskitetään layoutin gridissä; tämä elementti saa kaiken käytettävissä olevan korkeuden -->
 <section class="login-hero" aria-labelledby="welcomeTitle">
+  {#if showCookieNotice}
+    <div class="cookie-note" role="region" aria-label="Cookie notice">
+      <p class="ck-text">
+        <strong>Cookies:</strong> We only use essential cookies (for login/session and security).
+        No analytics or marketing cookies.
+      </p>
+      <button class="ck-btn" type="button" on:click={dismissCookieNotice} aria-label="Dismiss cookie notice">
+        OK
+      </button>
+    </div>
+  {/if}
   <h1 id="welcomeTitle" class="title">
     Welcome to the reservation tool for DLC-sitsis
   </h1>
@@ -153,6 +176,44 @@
   .msg.error { color: #b00020; }
   .msg.success { color: #0a7b27; }
 
+  .cookie-note {
+    position: fixed;
+    left: 50%;
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+
+    max-width: min(92vw, 720px);
+    padding: .85rem 1rem;
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #e5e7eb;
+    border-radius: .9rem;
+    box-shadow: 0 12px 28px rgba(0,0,0,.14);
+    text-align: left;
+  }
+
+  .ck-text {
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  .ck-btn {
+    margin-left: auto;
+    appearance: none;
+    border: none;
+    border-radius: .6rem;
+    padding: .5rem .85rem;
+    background: #6b21a8;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
   /* Jos näyttö on matala, pienennetään elementtejä hieman, jotta ei tarvita scrollia */
   @media (max-height: 700px) {
     .title { font-size: clamp(1.4rem, 4.5vw, 2.4rem); }
@@ -161,4 +222,13 @@
     input { padding: .5rem .7rem; }
     .submit { padding: .5rem .9rem; }
   }
+
+  @media (max-width: 420px) {
+  .cookie-note {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .ck-btn { width: 100%; }
+  }
+
 </style>
