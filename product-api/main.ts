@@ -2,9 +2,10 @@ import { Application, Router, Context } from "@oak/oak";
 import { loginHandler, logoutHandler, authMiddleware } from "./auth/auth.ts";
 import { isReservationArray } from "./models/product.ts";
 import { getUserReservations } from "./models/users.ts";
-import { getReservationGate, readConfig, writeConfig } from "./models/config.ts";
+import { getReservationGate } from "./models/config.ts";
 import { reserveProductsAsOneOperationFlexible, listProducts } from "./controllers/productController.ts";
 import { oakCors } from "@tajpouria/cors";
+
 
 // --- Reitit ---
 const router = new Router();

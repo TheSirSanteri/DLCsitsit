@@ -1,6 +1,7 @@
 import { Context } from "@oak/oak";
 import { jwtVerify, SignJWT } from "npm:jose@5.9.6";
-import { readUsers } from "../models/users.ts";
+//import { readUsers } from "../models/users.ts";
+import { supabase } from "../models/db.ts";
 
 const SECRET = new TextEncoder().encode(Deno.env.get("JWT_SECRET") ?? "dev-secret-change-me");
 
@@ -38,9 +39,21 @@ export async function loginHandler(ctx: Context) {
     return;
   }
 
-  const users = await readUsers();
-  const user = users.find((u) => u.username === username);
-  if (!user || user.password !== password) {
+  const { data: user, error } = await supabase
+    .from("users")
+    .select("username, password")
+    .eq("username", username)
+    .single();
+
+  if (error || !user) {
+    ctx.response.status = 401;
+    ctx.response.body = { error: "Wrong username or password" };
+    return;
+  }
+// Admin gives the passwords and app isn't ment to work long, so no hashing needed
+  const ok = user.password === password;
+
+    if (!ok) {
     ctx.response.status = 401;
     ctx.response.body = { error: "Wrong username or password" };
     return;
@@ -54,7 +67,7 @@ export async function loginHandler(ctx: Context) {
   ctx.response.body = { token, expiresInSeconds: 86400 };
 }
 
-/** Suojaava middleware */
+// Suojaava middleware
 export async function authMiddleware(ctx: Context, next: () => Promise<unknown>) {
   const token = extractBearer(ctx);
   if (!token) {
@@ -65,14 +78,20 @@ export async function authMiddleware(ctx: Context, next: () => Promise<unknown>)
 
   try {
     const { payload } = await jwtVerify(token, SECRET, { algorithms: ["HS256"] });
-    const users = await readUsers();
-    const me = users.find((u) => u.username === payload.sub);
-    if (!me) {
+    const username = String(payload.sub ?? "");
+    const { data: me, error } = await supabase
+      .from("users")
+      .select("username")
+      .eq("username", username)
+      .single();
+
+    if (error || !me) {
       ctx.response.status = 401;
       ctx.response.body = { error: "user not found" };
       return;
     }
-    (ctx.state as any).user = me;
+
+    (ctx.state as any).user = { username: me.username };
     await next();
   } catch {
     ctx.response.status = 401;

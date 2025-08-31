@@ -1,12 +1,8 @@
+import { supabase } from "./db.ts";
+
 export type UserReservation = {
   reservedAt: string; // ISO for the whole operation
   items: Array<{ productId: string; quantity: number }>;
-};
-
-export type ReservedProduct = {
-  productId: string;
-  quantity: number;
-  reservedAt: string; // legacy per-item; we won't write new entries here
 };
 
 export type User = {
@@ -17,30 +13,34 @@ export type User = {
   reservations?: UserReservation[];    // reservation
 };
 
-// --- IO-apurit Deno-ympäristöön ---
-const USERS_URL = new URL("./users.json", import.meta.url);
 
-export async function readUsers(): Promise<User[]> {
-  const txt = await Deno.readTextFile(USERS_URL);
-  return JSON.parse(txt) as User[];
-}
+export async function getUserReservations(username: string): Promise<UserReservation[]> {
+  const { data: reservations, error } = await supabase
+    .from("reservations")
+    .select("id, reserved_at")
+    .eq("username", username)
+    .order("reserved_at", { ascending: false });
 
-export async function writeUsers(data: User[]): Promise<void> {
-  const tmp = new URL("./users.json.tmp", import.meta.url);
-  await Deno.writeTextFile(tmp, JSON.stringify(data, null, 2));
-  await Deno.rename(tmp, USERS_URL); // atominen vaihto
-}
+  if (error) throw new Error(error.message);
+  if (!reservations || reservations.length === 0) return [];
 
-export async function getUserByUsername(
-  username: string
-): Promise<User | undefined> {
-  const users = await readUsers();
-  return users.find(u => u.username === username);
-}
+  const ids = reservations.map((r) => r.id);
+  const { data: items, error: itemsErr } = await supabase
+    .from("reservation_items")
+    .select("reservation_id, product_id, quantity")
+    .in("reservation_id", ids);
 
-export async function getUserReservations(
-  username: string
-): Promise<UserReservation[]> {
-  const user = await getUserByUsername(username);
-  return user?.reservations ?? [];
+  if (itemsErr) throw new Error(itemsErr.message);
+
+  const byRes = new Map<string, Array<{ productId: string; quantity: number }>>();
+  for (const it of items ?? []) {
+    const arr = byRes.get(it.reservation_id) ?? [];
+    arr.push({ productId: it.product_id, quantity: it.quantity });
+    byRes.set(it.reservation_id, arr);
+  }
+
+  return reservations.map((r) => ({
+    reservedAt: r.reserved_at,
+    items: byRes.get(r.id) ?? [],
+  }));
 }

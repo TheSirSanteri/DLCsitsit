@@ -1,7 +1,7 @@
 
 ### API base
 @baseUrl = http://localhost:8000
-@Token = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiIxIiwiZXhwIjoxNzU2MzI3NjQyfQ.Dr9rSd4S-Q_DX_IrEvNSZv3TEriLKlV1JgjdW9LSi5w
+@Token = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyIiwidXNlcm5hbWUiOiIyIiwiZXhwIjoxNzU2NzIyNTI1fQ.WNav9FxdzEykRGHFydAnoqlOrNagek9FcDVIcBGuHyY
 
 ### 1) Health check
 GET {{baseUrl}}/api/health
@@ -11,11 +11,15 @@ GET {{baseUrl}}/api/health
 POST {{baseUrl}}/api/login
 Content-Type: application/json
 
-{ "username": "1", "password": "XCV12345" }
+{ "username": "2", "password": "XCT12345" }
 
 
 ### 3) List products
 GET {{baseUrl}}/api/products
+
+### Tells when reservation window starts:
+GET {{baseUrl}}/api/reservations/window
+
 
 ### 4) Reserve product for the logged-in user
 # Reserve 2 units of product with id "1"
@@ -24,8 +28,8 @@ Authorization: Bearer {{Token}}
 Content-Type: application/json
 
 [
-  {"productId": "1", "quantity": 4},
-  {"productId": "2", "quantity": 7}
+  {"productId": "1", "quantity": 12},
+  {"productId": "2", "quantity": 11}
 ]
 
 ### 5) Check my reservations

@@ -1,37 +1,15 @@
-// models/config.ts
 export type ReservationConfig = {
   reservationOpensAt: string | null;
 };
 
-const CONFIG_URL = new URL("./config.json", import.meta.url);
-
-async function readJson<T>(url: URL): Promise<T> {
-  const txt = await Deno.readTextFile(url);
-  return JSON.parse(txt) as T;
-}
-async function writeJsonAtomic(url: URL, data: unknown) {
-  const tmp = new URL(url.pathname + ".tmp", url);
-  await Deno.writeTextFile(tmp, JSON.stringify(data, null, 2));
-  await Deno.rename(tmp, url);
-}
-
 export async function readConfig(): Promise<ReservationConfig> {
-  try {
-    const cfg = await readJson<ReservationConfig>(CONFIG_URL);
-    return {
-      reservationOpensAt:
-        typeof cfg?.reservationOpensAt === "string" || cfg?.reservationOpensAt === null
-          ? cfg.reservationOpensAt
-          : null,
-    };
-  } catch {
-    // Jos tiedostoa ei ole → oletus: avattu (null = ei porttia)
-    return { reservationOpensAt: null };
-  }
+  const val = await Deno.env.get("RESERVATION_OPENS_AT") ?? null;
+  return { reservationOpensAt: val };
 }
 
-export async function writeConfig(cfg: ReservationConfig): Promise<void> {
-  await writeJsonAtomic(CONFIG_URL, cfg);
+export function writeConfig(_cfg: ReservationConfig): Promise<void> {
+  // Ei tueta envin kirjoitusta Deployssa
+  throw new Error("Writing config not supported in this environment");
 }
 
 function parseOpensAtToMs(iso: string | null): number {
