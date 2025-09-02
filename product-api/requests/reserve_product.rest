@@ -1,7 +1,0 @@
-// Reserve a product
-POST http://localhost:8000/api/products/reserve
-Content-Type: application/json
-
-[
-    { "id": "2", "quantity": 1 }
-]
