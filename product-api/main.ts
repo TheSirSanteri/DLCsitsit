@@ -1,10 +1,10 @@
-import { Application, Router, Context } from "jsr:@oak/oak";
+import { Application, Router, Context } from "jsr:@oak/oak@^17.1.5";
 import { loginHandler, logoutHandler, authMiddleware } from "./auth/auth.ts";
 import { isReservationArray } from "./models/product.ts";
 import { getUserReservations } from "./models/users.ts";
 import { getReservationGate } from "./models/config.ts";
 import { reserveProductsAsOneOperationFlexible, listProducts } from "./controllers/productController.ts";
-import { oakCors } from "jsr:@tajpouria/cors";
+import { oakCors } from "jsr:@tajpouria/cors@1.2.1";
 
 // Environment detection
 const IS_DEPLOY = Boolean(Deno.env.get("DENO_DEPLOYMENT_ID"));
