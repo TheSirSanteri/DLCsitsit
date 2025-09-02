@@ -1,11 +1,20 @@
-import { Application, Router, Context } from "@oak/oak";
+import { Application, Router, Context } from "jsr:@oak/oak";
 import { loginHandler, logoutHandler, authMiddleware } from "./auth/auth.ts";
 import { isReservationArray } from "./models/product.ts";
 import { getUserReservations } from "./models/users.ts";
 import { getReservationGate } from "./models/config.ts";
 import { reserveProductsAsOneOperationFlexible, listProducts } from "./controllers/productController.ts";
-import { oakCors } from "@tajpouria/cors";
+import { oakCors } from "jsr:@tajpouria/cors";
 
+// Environment detection
+const IS_DEPLOY = Boolean(Deno.env.get("DENO_DEPLOYMENT_ID"));
+const PORT = Number(Deno.env.get("PORT") ?? 8000);
+
+// ALLOWED_ORIGINS (vain deployssa).
+const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
 
 // --- Reitit ---
 const router = new Router();
@@ -118,17 +127,36 @@ router.get("/api/me/reservations", authMiddleware, async (ctx) => {
 const app = new Application();
 
 // CORS ENSIN — devissä riittää wildcard (Bearer-token, ei credentials)
-app.use(oakCors({
-  origin: "*",
-  allowedHeaders: ["Authorization", "Content-Type"],
-  methods: ["GET", "POST", "OPTIONS"],
-  credentials: false,
-}));
+app.use(
+  oakCors({
+    origin: IS_DEPLOY
+      ? (reqOrigin) => {
+          if (!reqOrigin) return false;
+          // jos listaa ei ole asetettu, oletetaan turvallisesti "false"
+          return ALLOWED_ORIGINS.length > 0
+            ? ALLOWED_ORIGINS.includes(reqOrigin)
+            : false;
+        }
+      : "*",
+    allowedHeaders: ["Authorization", "Content-Type"],
+    methods: ["GET", "POST", "OPTIONS"],
+    credentials: false,
+  }),
+);
 
 // Reitit
 app.use(router.routes());
 app.use(router.allowedMethods());
 
-const PORT = Number(Deno.env.get("PORT") ?? 8000);
-console.log(`Server running on http://localhost:${PORT}`);
-await app.listen({ port: PORT });
+// ----- Käynnistys: Deploy vs. Local -----
+if (IS_DEPLOY) {
+  console.log("[boot] Deno Deploy mode (Deno.serve)");
+
+  const handler: Deno.ServeHandler = (req, _info) =>
+    app.handle(req).then((res) => res ?? new Response("Not Found", { status: 404 }));
+
+  Deno.serve(handler);
+} else {
+  console.log(`[boot] Local dev mode: http://localhost:${PORT}`);
+  await app.listen({ port: PORT });
+}
