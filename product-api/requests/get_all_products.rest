@@ -1,4 +1,0 @@
-//Print the list of all products
-
-GET http://localhost:8000/api/products
-
