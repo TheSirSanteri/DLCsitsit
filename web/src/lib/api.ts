@@ -1,5 +1,5 @@
 import { get } from 'svelte/store';
-import { auth } from '$lib/stores/auth';
+import { auth } from './stores/auth.ts';
 
 
 export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
