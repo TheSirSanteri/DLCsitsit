@@ -1,0 +1,39 @@
+{
+  "headers": [
+    {
+      "source": "/_app/immutable/:file*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, immutable, max-age=31536000"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/products/",
+      "destination": "/products",
+      "permanent": true
+    }
+  ],
+  "rewrites": [],
+  "staticFiles": [
+    {
+      "source": "/",
+      "destination": ".deno-deploy\\static\\index.html"
+    },
+    {
+      "source": "/products",
+      "destination": ".deno-deploy\\static\\products.html"
+    },
+    {
+      "source": "/_app/:file*",
+      "destination": ".deno-deploy/static/_app/:file*"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": ".deno-deploy\\static\\robots.txt"
+    }
+  ]
+}
