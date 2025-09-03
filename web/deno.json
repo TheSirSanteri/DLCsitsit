@@ -2,12 +2,21 @@
   "tasks": {
     "dev": "deno run -A --node-modules-dir --watch=src/,static/ npm:vite",
     "build": "deno run -A --node-modules-dir npm:vite build",
-    "preview": "deno run -A --node-modules-dir npm:vite preview"
+    "preview": "deno run -A --node-modules-dir npm:vite preview",
+    "devalue": "npm:devalue@^5"
   },
-  "lint": {
-    "exclude": ["DLCsitsit/web/**", "web/**"]
+    "imports": {
+    "@sveltejs/kit": "npm:@sveltejs/kit@^2",
+    "svelte": "npm:svelte@^5",
+    "vite": "npm:vite@^5",
+    "set-cookie-parser": "npm:set-cookie-parser@^2",
+    "cookie": "npm:cookie@^0.6.0"
   },
-  "fmt": {
-    "exclude": ["DLCsitsit/web/**", "web/**"]
-  }
+    "lint": {
+      "exclude": ["DLCsitsit/web/**", "web/**"]
+    },
+      "fmt": {
+        "exclude": ["DLCsitsit/web/**", "web/**"]
+  },
+  "nodeModulesDir": "auto"
 }
