@@ -4,7 +4,7 @@ import { isReservationArray } from "./models/product.ts";
 import { getUserReservations } from "./models/users.ts";
 import { getReservationGate } from "./models/config.ts";
 import { reserveProductsAsOneOperationFlexible, listProducts } from "./controllers/productController.ts";
-import { oakCors } from "jsr:@tajpouria/cors@1.2.1";
+import { cors } from "./middlewares/cors.ts";
 
 // Environment detection
 const IS_DEPLOY = Boolean(Deno.env.get("DENO_DEPLOYMENT_ID"));
@@ -18,6 +18,17 @@ const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
 
 // --- Reitit ---
 const router = new Router();
+
+const app = new Application();
+
+app.use(cors({
+  isDeploy: IS_DEPLOY,
+  allowedOrigins: ALLOWED_ORIGINS,
+  allowCredentials: false, // We use Bearer-Auth,
+}));
+
+app.use(router.routes());
+app.use(router.allowedMethods());
 
 // Health check
 router.get("/api/health", (ctx: Context) => {
@@ -122,31 +133,6 @@ router.get("/api/me/reservations", authMiddleware, async (ctx) => {
   ctx.response.status = 200;
   ctx.response.body = { reservations };
 });
-
-// --- Sovellus ---
-const app = new Application();
-
-// CORS ENSIN — devissä riittää wildcard (Bearer-token, ei credentials)
-app.use(
-  oakCors({
-    origin: IS_DEPLOY
-      ? (reqOrigin) => {
-          if (!reqOrigin) return false;
-          // jos listaa ei ole asetettu, oletetaan turvallisesti "false"
-          return ALLOWED_ORIGINS.length > 0
-            ? ALLOWED_ORIGINS.includes(reqOrigin)
-            : false;
-        }
-      : "*",
-    allowedHeaders: ["Authorization", "Content-Type"],
-    methods: ["GET", "POST", "OPTIONS"],
-    credentials: false,
-  }),
-);
-
-// Reitit
-app.use(router.routes());
-app.use(router.allowedMethods());
 
 // ----- Käynnistys: Deploy vs. Local -----
 if (IS_DEPLOY) {
