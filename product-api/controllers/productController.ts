@@ -11,7 +11,7 @@ export async function listProducts(): Promise<Product[]> {
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((p) => ({
-    id: p.id,
+    id: String(p.id),
     name: p.name,
     available: p.available,
     maxPerUser: p.max_per_user ?? 0,
@@ -30,9 +30,16 @@ export async function reserveProductsAsOneOperationFlexible(
   userId: string,
   rawItems: ReservationItem[],
 ): Promise<ReserveResult> {
-  const items = mergeDuplicateItems(rawItems);
 
-  // RPC palauttaa rakenteen, jonka mapataan suoraan ReserveResultiin
+  // 1) Yhdistä duplikaatit (palauttaa { productId: string, quantity })
+  const merged = mergeDuplicateItems(rawItems);
+
+  // 2) Castaa RPC:lle numeromuotoon (int4), koska DB:n id on int4
+  const items = merged.map((it) => ({
+    productId: Number(it.productId),   // <-- tärkeä muunnos
+    quantity: Number(it.quantity)
+  }));
+
   const { data, error } = await supabase.rpc("reserve_flexible", {
     p_username: userId,
     p_items: items as unknown as Record<string, unknown>[],

@@ -1,6 +1,5 @@
 import { Context } from "jsr:@oak/oak@^17.1.5";
 import { jwtVerify, SignJWT } from "npm:jose@5.9.6";
-//import { readUsers } from "../models/users.ts";
 import { supabase } from "../models/db.ts";
 
 const SECRET = new TextEncoder().encode(Deno.env.get("JWT_SECRET") ?? "dev-secret-change-me");

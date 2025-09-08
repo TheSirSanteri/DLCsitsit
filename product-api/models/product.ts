@@ -8,7 +8,7 @@ export interface Product {
 };
 
 export interface ReservationItem {
-  productId: string;
+  productId: string | number;
   quantity: number;
 };
 
@@ -28,7 +28,8 @@ export function isReservationArray(body: unknown): body is ReservationItem[] {
 export function mergeDuplicateItems(items: ReservationItem[]): ReservationItem[] {
   const map = new Map<string, number>();
   for (const it of items) {
-    map.set(it.productId, (map.get(it.productId) ?? 0) + it.quantity);
+    const key = String(it.productId); // <-- castaa avain aina stringiksi
+    map.set(key, (map.get(key) ?? 0) + it.quantity);
   }
   return [...map.entries()].map(([productId, quantity]) => ({ productId, quantity }));
 }
