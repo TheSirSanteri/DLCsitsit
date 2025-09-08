@@ -43,7 +43,7 @@ router.post("/api/logout", logoutHandler);
 router.get("/api/reservations/window", async (ctx: Context) => {
   const gate = await getReservationGate();
   ctx.response.status = 200;
-  ctx.response.body = gate; // { canReserve, opensAt, now }
+  ctx.response.body = gate; // { canReserve, opensAt, closesAt, status, now }
 });
 
 // Show all products
@@ -58,14 +58,25 @@ router.use("/api/products/reserve", async (ctx: Context, next) => {
   if (ctx.request.method.toUpperCase() === "POST") {
     const gate = await getReservationGate();
     if (!gate.canReserve) {
-      ctx.response.status = 403;
-      ctx.response.body = {
-        error: "reservations_not_open",
-        message: "Reservations have not opened yet.",
-        opensAt: gate.opensAt,
-        now: gate.now,
-      };
-      return;
+      const base = { opensAt: gate.opensAt, closesAt: gate.closesAt, now: gate.now, status: gate.status };
+      if (gate.status === "before") {
+        ctx.response.status = 403;
+        ctx.response.body = {
+          error: "reservations_not_open",
+          message: "Reservations have not opened yet.",
+          ...base,
+        };
+        return;
+      }
+      if (gate.status === "closed") {
+        ctx.response.status = 403;
+        ctx.response.body = {
+          error: "reservations_closed",
+          message: "Reservations are closed.",
+          ...base,
+        };
+        return;
+      }
     }
   }
   await next();
