@@ -2,7 +2,7 @@ export interface Product {
   id: string;
   name: string;
   available: number;
-  maxPerUser: number; // optional, 0 = infinite
+  maxPerUser: number; // optional, 0 => infinite
   price: number;
   info: string;
 };

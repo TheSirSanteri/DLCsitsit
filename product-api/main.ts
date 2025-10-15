@@ -10,7 +10,7 @@ import { cors } from "./middlewares/cors.ts";
 const IS_DEPLOY = Boolean(Deno.env.get("DENO_DEPLOYMENT_ID"));
 const PORT = Number(Deno.env.get("PORT") ?? 8000);
 
-// ALLOWED_ORIGINS (vain deployssa).
+// ALLOWED_ORIGINS (only in Deno deploy)
 const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
   .split(",")
   .map(s => s.trim())
@@ -40,6 +40,7 @@ router.get("/api/health", (ctx: Context) => {
 router.post("/api/login", loginHandler);
 router.post("/api/logout", logoutHandler);
 
+//Time window for reservations
 router.get("/api/reservations/window", async (ctx: Context) => {
   const gate = await getReservationGate();
   ctx.response.status = 200;
@@ -82,7 +83,7 @@ router.use("/api/products/reserve", async (ctx: Context, next) => {
   await next();
 });
 
-// Reservation (protected)
+// Reservation (auth protected)
 router.post("/api/products/reserve", authMiddleware, async (ctx: Context) => {
   console.log("[reserve] incoming");
 
@@ -137,7 +138,7 @@ router.post("/api/products/reserve", authMiddleware, async (ctx: Context) => {
   }
 });
 
-// Oma data
+//Shows own reservations
 router.get("/api/me/reservations", authMiddleware, async (ctx) => {
   const { username } = (ctx.state as { user: { username: string } }).user;
   const reservations = await getUserReservations(username);
@@ -145,7 +146,7 @@ router.get("/api/me/reservations", authMiddleware, async (ctx) => {
   ctx.response.body = { reservations };
 });
 
-// ----- Käynnistys: Deploy vs. Local -----
+// Running local or deploy
 if (IS_DEPLOY) {
   console.log("[boot] Deno Deploy mode (Deno.serve)");
 

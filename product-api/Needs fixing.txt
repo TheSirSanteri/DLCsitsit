@@ -1,3 +1,0 @@
-1) Tilauksien muokkaaminen ei available osiossa ota huomioon, että käyttäjällä voi olla valmiiksi reservation.
-
-2) Alhaalla ei ole tarpeeksi tilaa, reservation nappi tulee eteen.
